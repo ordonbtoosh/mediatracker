@@ -98,75 +98,6 @@ function getDataRepoConfig() {
   };
 }
 
-// ===============================
-// 🔄 MOCK DB OBJECT - Redirects legacy db.all calls to GitHub
-// ===============================
-// This mock `db` object intercepts callback-based db.all() calls that were
-// used with DuckDB and redirects them to our GitHub storage.
-// This allows us to keep the 26+ callback-based endpoints working without
-// extensive refactoring.
-
-// Forward declaration for settingsCache (defined later)
-let _settingsCache = null;
-let _settingsCacheTime = 0;
-
-const db = {
-  // Handle db.all() calls - the main query method used by endpoints
-  all: function (query, ...args) {
-    // Extract callback (last argument if it's a function)
-    let callback = args[args.length - 1];
-    if (typeof callback !== 'function') {
-      console.error("db.all mock: No callback provided");
-      return;
-    }
-
-    // Check if this is a settings query
-    if (query.includes("SELECT * FROM settings")) {
-      // Return cached settings asynchronously via callback
-      (async () => {
-        try {
-          // Use getSettingsRow which is defined later
-          if (typeof getSettingsRow === 'function') {
-            const settings = await getSettingsRow();
-            callback(null, [settings]);
-          } else if (_settingsCache) {
-            callback(null, [_settingsCache]);
-          } else {
-            callback(null, [{}]);
-          }
-        } catch (e) {
-          console.error("db.all mock error:", e.message);
-          callback(null, [{}]);
-        }
-      })();
-    } else {
-      // For any other queries, return empty (shouldn't happen with GitHub migration)
-      console.warn("db.all mock: Unknown query:", query);
-      callback(null, []);
-    }
-  },
-
-  // Handle db.run() calls - used for INSERT/UPDATE/DELETE
-  run: function (query, ...args) {
-    let callback = args[args.length - 1];
-    if (typeof callback === 'function') {
-      // For run commands, just call callback with success
-      // Actual writes now go through GitHub API directly
-      console.warn("db.run mock called (legacy code path):", query.substring(0, 50));
-      callback(null);
-    }
-  },
-
-  // Handle db.connect() calls - used for connection-based queries
-  connect: function () {
-    return {
-      all: db.all,
-      run: db.run,
-      close: function () { /* no-op */ }
-    };
-  }
-};
-
 if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
 
 const app = express();
@@ -5188,3 +5119,4 @@ app.use((req, res) => {
 // 🚀 Start server
 // ===============================
 app.listen(3000, "0.0.0.0", () => log("Server running at http://0.0.0.0:3000 (accessible on local network)"));
+
