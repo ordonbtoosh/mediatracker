@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: mediatracker
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        sync: false
+      - key: GITHUB_DATA_REPO
+        value: mediatracker-data
+      - key: GITHUB_IMAGE_REPOS
+        value: mediatracker-images-1
+

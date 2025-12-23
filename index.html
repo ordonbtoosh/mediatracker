@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Rank</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/home-minimal.css">
+    <link rel="stylesheet" href="/mobile.css">
+    <script>
+        // Apply saved theme immediately to prevent flash
+        (function () {
+            try {
+                const saved = localStorage.getItem('mediaTrackerTheme');
+                if (saved) {
+                    const theme = JSON.parse(saved);
+                    document.documentElement.style.setProperty('--bg-color', theme.themeBackgroundColor || '#000000');
+                    document.documentElement.style.setProperty('--hover-color', theme.themeHoverColor || '#ff0000');
+                    document.documentElement.style.setProperty('--title-color', theme.themeTitleColor || '#ffffff');
+                    document.documentElement.style.setProperty('--text-color', theme.themeTextColor || '#cccccc');
+                    document.documentElement.style.setProperty('--font-family', theme.themeFontFamily || "'Momo Trust Sans', sans-serif");
+                    document.documentElement.style.setProperty('--dropdown-color', theme.themeDropdownColor || '#ff0000');
+
+                }
+            } catch (e) {
+                console.error('Error loading theme from localStorage:', e);
+            }
+        })();
+
+        // Prevent flash of wrong content on detail view routes
+        (function () {
+            const pathname = window.location.pathname;
+            const segments = pathname.split('/').filter(Boolean);
+
+            // Check if this looks like a detail view route (e.g., /tv/123 or /movies/456)
+            const overlayTypes = ['movies', 'tv', 'anime', 'games', 'actors'];
+            if (segments.length >= 2) {
+                const potentialType = decodeURIComponent(segments[segments.length - 2]);
+                if (overlayTypes.includes(potentialType)) {
+                    // Add a style tag immediately to hide views before they render
+                    const style = document.createElement('style');
+                    style.setAttribute('data-anti-flash', 'true');
+                    style.textContent = `
+                        #homeView,
+                        #libraryView,
+                        #sequelsView,
+                        #collectionView,
+                        #insightsView,
+                        #searchView {
+                            display: none !important;
+                        }
+                        .controls-row,
+                        .tabs-row {
+                            display: none !important;
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <h1 class="app-title" id="appTitle" style="cursor: pointer;">Meta Rank</h1>
+                <button class="nav-menu-btn" id="navMenuBtn" title="Navigation">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="nav-slide-menu" id="navSlideMenu">
+                    <button class="nav-menu-item" data-view="library" data-tab="movies">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+                            <polyline points="17 2 12 7 7 2"></polyline>
+                        </svg><span>Movies</span>
+                    </button>
+                    <button class="nav-menu-item" data-view="library" data-tab="tv">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+                            <circle cx="12" cy="14" r="3"></circle>
+                        </svg><span>Series</span>
+                    </button>
+                    <button class="nav-menu-item" data-view="library" data-tab="anime">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                        </svg><span>Anime</span>
+                    </button>
+                    <button class="nav-menu-item" data-view="library" data-tab="games">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="6" y1="11" x2="10" y2="11"></line>
+                            <line x1="8" y1="9" x2="8" y2="13"></line>
+                            <line x1="15" y1="12" x2="15.01" y2="12"></line>
+                            <line x1="18" y1="10" x2="18.01" y2="10"></line>
+                            <path
+                                d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z">
+                            </path>
+                        </svg><span>Games</span>
+                    </button>
+                    <button class="nav-menu-item" data-view="library" data-tab="actors">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg><span>People</span>
+                    </button>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <div class="search-container">
+                    <div class="search-category-dropdown">
+                        <button class="search-category-btn" id="searchCategoryBtn" title="Search Category">
+                            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="search-category-menu" id="searchCategoryMenu">
+                            <button class="search-category-option active" data-category="all">All</button>
+                            <button class="search-category-option" data-category="movies">Movies</button>
+                            <button class="search-category-option" data-category="tv">TV Series</button>
+                            <button class="search-category-option" data-category="anime">Anime</button>
+                            <button class="search-category-option" data-category="games">Games</button>
+                            <button class="search-category-option" data-category="actors">People</button>
+                            <div class="search-category-divider"></div>
+                            <button class="search-category-option" data-category="advanced">Advanced Search</button>
+                        </div>
+                    </div>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search..." />
+                </div>
+                <div class="detail-settings-dropdown">
+                    <button class="detail-settings-btn" id="detailSettingsBtn" style="display: none;" title="Settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z">
+                            </path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                    <div class="detail-settings-menu" id="detailSettingsMenu">
+                        <button class="detail-menu-option" id="changePosterBtn">Change Poster (TMDB)</button>
+                        <button class="detail-menu-option" id="changeBannerBtn">Change Banner (TMDB)</button>
+                        <button class="detail-menu-option" id="changePosterFanartBtn" style="display: none;">Change
+                            Poster (Fanart.tv)
+                        </button>
+                        <button class="detail-menu-option" id="changeBannerFanartBtn" style="display: none;">Change
+                            Banner (Fanart.tv)
+                        </button>
+                        <button class="detail-menu-option" id="uploadPosterBtn">Upload Poster</button>
+                        <button class="detail-menu-option" id="uploadBannerBtn">Upload Banner</button>
+                    </div>
+                </div>
+                <div class="settings-dropdown">
+                    <button class="settings-btn" id="settingsBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z">
+                            </path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                    <div class="settings-menu" id="settingsMenu">
+                        <div class="settings-content">
+                            <div class="setting-group">
+                                <label for="bgColor">BG</label>
+                                <input type="color" id="bgColor" />
+                            </div>
+                            <div class="setting-group">
+                                <label for="hoverColor">Hover</label>
+                                <input type="color" id="hoverColor" />
+                            </div>
+                            <div class="setting-group">
+                                <label for="titleColor">Title</label>
+                                <input type="color" id="titleColor" />
+                            </div>
+                            <div class="setting-group">
+                                <label for="textColor">Text</label>
+                                <input type="color" id="textColor" />
+                            </div>
+                            <div class="setting-group">
+                                <label for="dropdownColor">Menus</label>
+                                <input type="color" id="dropdownColor" />
+                            </div>
+                            <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border-color);">
+                            <div class="api-toggle-wrapper">
+                                <input type="checkbox" id="apiKeyToggle" class="api-toggle-input" />
+                                <label for="apiKeyToggle" class="api-toggle-button">API Keys</label>
+                                <div class="api-toggle-panel">
+                                    <div class="setting-group">
+                                        <label for="tmdbApiKey">TMDB Key</label>
+                                        <input type="text" id="tmdbApiKey" placeholder="API key" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="malApiKey">MAL Key</label>
+                                        <input type="text" id="malApiKey" placeholder="API key" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="steamApiKey">Steam Key</label>
+                                        <input type="text" id="steamApiKey" placeholder="API key" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="steamgriddbApiKey">SteamGridDB Key</label>
+                                        <input type="text" id="steamgriddbApiKey" placeholder="API key" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="fanarttvApiKey">Fanart.tv Key</label>
+                                        <input type="text" id="fanarttvApiKey" placeholder="API key" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="omdbApiKey">OMDb Key</label>
+                                        <input type="text" id="omdbApiKey" placeholder="API key" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="spotifyClientId">Spotify Client ID</label>
+                                        <input type="text" id="spotifyClientId" placeholder="Client ID" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="spotifyClientSecret">Spotify Client Secret</label>
+                                        <input type="password" id="spotifyClientSecret" placeholder="Client Secret" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="youtubeApiKey">YouTube API Key</label>
+                                        <input type="text" id="youtubeApiKey" placeholder="API key" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="bioMaxChars">Max Biography Characters</label>
+                                        <input type="number" id="bioMaxChars" placeholder="1580" min="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Separate Tab Backgrounds dropdown -->
+                            <div class="api-toggle-wrapper">
+                                <input type="checkbox" id="bgToggle" class="api-toggle-input" />
+                                <label for="bgToggle" class="api-toggle-button">Tab Backgrounds</label>
+                                <div class="api-toggle-panel" id="bgTogglePanel">
+                                    <div class="setting-group">
+                                        <label for="tabBgSelect">Tab Background</label>
+                                        <select id="tabBgSelect">
+                                            <option value="home">Home</option>
+                                            <option value="movies">Movies</option>
+                                            <option value="tv">TV</option>
+                                            <option value="anime">Anime</option>
+                                            <option value="games">Games</option>
+                                            <option value="music">Music</option>
+                                        </select>
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="tabBgUrl">Background Image URL</label>
+                                        <input type="text" id="tabBgUrl" placeholder="https://example.com/image.jpg" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="tabBgUpload">Or upload image</label>
+                                        <input type="file" id="tabBgUpload" accept="image/*" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="tabBgOpacity">Background Opacity</label>
+                                        <input type="range" id="tabBgOpacity" min="0" max="100" value="40" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <button class="detail-menu-option" id="tabBgApplyBtn">Apply Background</button>
+                                        <button class="detail-menu-option" id="tabBgClearBtn">Clear Background</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Category Images Settings -->
+                            <div class="api-toggle-wrapper">
+                                <input type="checkbox" id="categoryImgToggle" class="api-toggle-input" />
+                                <label for="categoryImgToggle" class="api-toggle-button">Category Images</label>
+                                <div class="api-toggle-panel" id="categoryImgTogglePanel">
+                                    <div class="setting-group">
+                                        <label for="categoryImgSelect">Category</label>
+                                        <select id="categoryImgSelect">
+                                            <option value="anime">Anime</option>
+                                            <option value="movies">Movies</option>
+                                            <option value="tv">Series</option>
+                                            <option value="games">Games</option>
+                                            <option value="actors">People</option>
+                                        </select>
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="categoryImgUrl">Image URL</label>
+                                        <input type="text" id="categoryImgUrl"
+                                            placeholder="https://example.com/image.jpg" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="categoryImgUpload">Or upload image</label>
+                                        <input type="file" id="categoryImgUpload" accept="image/*" />
+                                    </div>
+                                    <div class="setting-group" id="categoryImgPreviewGroup" style="display: none;">
+                                        <label>Preview</label>
+                                        <img id="categoryImgPreview"
+                                            style="max-width: 100%; max-height: 100px; border-radius: 4px; margin-top: 0.5rem;" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <button class="detail-menu-option" id="categoryImgApplyBtn">Apply Image</button>
+                                        <button class="detail-menu-option" id="categoryImgClearBtn">Clear Image</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button id="saveSettings">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- Tabs Row -->
+        <nav class="tabs-row">
+            <button class="tab-btn" data-tab="tv">TV Series</button>
+            <button class="tab-btn" data-tab="movies">Movies</button>
+            <button class="tab-btn" data-tab="anime">Anime</button>
+            <button class="tab-btn" data-tab="games">Games</button>
+            <button class="tab-btn" data-tab="actors">People</button>
+        </nav>
+        <!-- Controls Row -->
+        <div class="controls-row">
+            <div class="controls-left">
+                <div class="add-dropdown">
+                    <button class="add-btn" id="addBtn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                    <div class="add-menu" id="addMenu">
+                        <div class="add-menu-header">
+                            <h4>Add New Item</h4>
+                        </div>
+                        <div class="modal-tabs">
+                            <button type="button" class="modal-tab active" id="manualTab">Manual Entry</button>
+                            <button type="button" class="modal-tab" id="apiTab">Search API</button>
+                        </div>
+                        <div id="manualFormContainer">
+                            <form class="modal-form" id="itemForm">
+                                <input type="hidden" id="itemExternalApiId" />
+                                <div class="form-group">
+                                    <label for="itemName">Name/Title *</label>
+                                    <input type="text" id="itemName" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="itemPoster">Poster Image</label>
+                                    <input type="file" id="itemPoster" accept="image/*" />
+                                    <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+                                        <button type="button"
+                                            class="small-btn detail-menu-option detail-menu-option--inline detail-menu-option--primary"
+                                            id="selectPosterFromTMDB">Select Poster (TMDB)</button>
+                                    </div>
+                                    <div class="image-preview" id="posterPreview"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="itemBanner">Banner Image</label>
+                                    <input type="file" id="itemBanner" accept="image/*" />
+                                    <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+                                        <button type="button"
+                                            class="small-btn detail-menu-option detail-menu-option--inline"
+                                            id="selectBannerFromTMDB">Select Banner (TMDB)</button>
+                                    </div>
+                                    <div class="image-preview" id="bannerPreview"></div>
+                                </div>
+                                <div class="form-group" id="rankGroup">
+                                    <label>Your Rank</label>
+                                    <div class="form-star-rating" id="formStarRating"><span class="star"
+                                            data-rating="1">★</span><span class="star" data-rating="2">★</span><span
+                                            class="star" data-rating="3">★</span><span class="star"
+                                            data-rating="4">★</span><span class="star" data-rating="5">★</span>
+                                        <div class="rating-tooltip" aria-hidden="true" style="display:none;"></div>
+                                    </div>
+                                </div>
+                                <div class="form-details-toggle-wrapper">
+                                    <input type="checkbox" id="formDetailsToggle" class="form-details-toggle-input" />
+                                    <label for="formDetailsToggle" class="form-details-toggle-button">Additional
+                                        Details
+                                    </label>
+                                    <div class="form-details-toggle-panel">
+                                        <div class="form-group" id="yearGroup">
+                                            <label for="itemYear">Year</label>
+                                            <input type="text" id="itemYear" />
+                                        </div>
+                                        <div class="form-group movies-field" id="runtimeGroup" style="display: none;">
+                                            <label for="itemRuntime">Runtime</label>
+                                            <input type="text" id="itemRuntime" readonly />
+                                            <input type="hidden" id="itemRuntimeMinutesHidden" />
+                                        </div>
+                                        <div class="form-group tv-field anime-field" id="episodeCountGroup"
+                                            style="display: none;">
+                                            <label for="itemEpisodeCount">Episodes</label>
+                                            <input type="text" id="itemEpisodeCount" readonly />
+                                            <input type="hidden" id="itemEpisodeCountHidden" />
+                                        </div>
+                                        <div class="form-group tv-field anime-field" id="episodeDurationGroup"
+                                            style="display: none;">
+                                            <label for="itemEpisodeDuration">Episode Runtime</label>
+                                            <input type="text" id="itemEpisodeDuration" readonly />
+                                            <input type="hidden" id="itemEpisodeRuntimeMinutesHidden" />
+                                        </div>
+                                        <div class="form-group" id="genreGroup">
+                                            <label for="itemGenre">Genre</label>
+                                            <input type="text" id="itemGenre" placeholder="Comma-separated" />
+                                        </div>
+                                        <div class="form-group" id="scoreGroup">
+                                            <label for="itemUserScore">User Score</label>
+                                            <input type="number" id="itemUserScore" min="0" max="100"
+                                                placeholder="0-100" />
+                                        </div>
+                                        <div class="form-group" id="descriptionGroup">
+                                            <label for="itemDescription">Description</label>
+                                            <textarea id="itemDescription" rows="4"></textarea>
+                                        </div>
+                                        <!-- Actor-specific fields (hidden by default) -->
+                                        <div class="form-group actor-field" id="socialMediaGroup"
+                                            style="display: none;">
+                                            <label for="itemSocialMedia">Social Media Pages</label>
+                                            <input type="text" id="itemSocialMedia"
+                                                placeholder="URLs separated by commas" />
+                                        </div>
+                                        <div class="form-group actor-field" id="linkedMoviesGroup"
+                                            style="display: none;">
+                                            <label for="itemLinkedMovies">Linked Movies/TV</label>
+                                            <div class="linked-movies-search">
+                                                <input type="text" id="linkedMoviesSearchInput"
+                                                    placeholder="Search for movies/TV to link..." />
+                                                <button type="button" id="linkedMoviesSearchBtn"
+                                                    class="search-btn">Search</button>
+                                            </div>
+                                            <div id="linkedMoviesResults" class="linked-movies-results"></div>
+                                            <div id="linkedMoviesSelected" class="linked-movies-selected"></div>
+                                        </div>
+                                        <div class="form-group actor-field" id="biographyGroup" style="display: none;">
+                                            <label for="itemBiography">Biography</label>
+                                            <textarea id="itemBiography" rows="6"
+                                                placeholder="Actor biography..."></textarea>
+                                        </div>
+                                        <div class="form-group anime-field" id="studioGroup" style="display: none;">
+                                            <label for="itemStudio">Studio</label>
+                                            <input type="text" id="itemStudio" placeholder="Animation studio name" />
+                                        </div>
+                                        <div class="form-group games-field" id="developerGroup" style="display: none;">
+                                            <label for="itemDeveloper">Developer</label>
+                                            <input type="text" id="itemDeveloper" placeholder="Game developer name" />
+                                        </div>
+                                        <div class="form-group games-field" id="timeToBeatGroup" style="display: none;">
+                                            <label for="itemTimeToBeat">Time to Beat</label>
+                                            <input type="text" id="itemTimeToBeat" readonly />
+                                            <input type="hidden" id="itemTimeToBeatAverageHidden" />
+                                        </div>
+                                        <div class="form-group tv-field movies-field" id="directorCreatorGroup"
+                                            style="display: none;">
+                                            <label for="itemDirectorCreator">Director or Creator</label>
+                                            <input type="text" id="itemDirectorCreator"
+                                                placeholder="Director or creator name" />
+                                        </div>
+                                        <div class="form-group" id="collectionGroup">
+                                            <label for="itemCollectionSearch">Add to Collection</label>
+                                            <div class="collection-search-wrapper">
+                                                <input type="text" id="itemCollectionSearch"
+                                                    placeholder="Search collections from same tab..." />
+                                                <select id="itemCollection" style="display: none;">
+                                                    <option value="">None</option>
+                                                </select>
+                                            </div>
+                                            <div id="collectionSearchResults" class="collection-search-results"></div>
+                                        </div>
+                                        <div class="form-group actor-field" id="rolesGroup" style="display: none;">
+                                            <label for="itemRoles">Roles</label>
+                                            <input type="text" id="itemRoles" placeholder="e.g. Writer, Producer" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" class="cancel-btn" id="cancelForm">Cancel</button>
+                                    <button type="submit" class="save-btn">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div id="apiFormContainer" style="display: none;">
+                            <div class="api-search-content">
+                                <div id="actorSearchTabs" class="actor-search-tabs" style="display: none;">
+                                    <button type="button" class="actor-search-tab active" id="tmdbActorTab"
+                                        data-source="tmdb">People (TMDB)</button>
+                                    <button type="button" class="actor-search-tab" id="spotifySingerTab"
+                                        data-source="spotify">Singers (Spotify)</button>
+                                </div>
+                                <input type="text" id="apiSearchInput" placeholder="Search for title..." />
+                                <button id="apiSearchExecuteBtn">Search</button>
+                                <div class="api-results" id="apiResults">
+                                    <p class="api-placeholder">Search functionality coming soon...</p>
+                                </div>
+                                <div class="api-result-meta" id="apiResultMeta"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="delete-btn" id="deleteBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="controls-right">
+                <div class="sort-dropdown">
+                    <button class="sort-btn" id="sortBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18M7 12h10M11 18h2"></path>
+                        </svg>
+                    </button>
+                    <div class="sort-menu" id="sortMenu">
+                        <button class="menu-option" data-value="name-asc">Name A→Z</button>
+                        <button class="menu-option" data-value="name-desc">Name Z→A</button>
+                        <button class="menu-option" data-value="year-desc">Year (newest first)</button>
+                        <button class="menu-option" data-value="year-asc">Year (oldest first)</button>
+                        <button class="menu-option" data-value="userScore-desc">User Score (highest)</button>
+                        <button class="menu-option" data-value="userScore-asc">User Score (lowest)</button>
+                        <button class="menu-option" data-value="myRank-desc">My Rank (highest)</button>
+                        <button class="menu-option" data-value="myRank-asc">My Rank (lowest)</button>
+                    </div>
+                    <select class="sort-select hidden" id="sortSelect">
+                        <option value="name-asc">Name A→Z</option>
+                        <option value="name-desc">Name Z→A</option>
+                        <option value="year-desc">Year (newest first)</option>
+                        <option value="year-asc">Year (oldest first)</option>
+                        <option value="userScore-desc">User Score (highest first)</option>
+                        <option value="userScore-asc">User Score (lowest first)</option>
+                        <option value="myRank-desc">My Rank (highest first)</option>
+                        <option value="myRank-asc">My Rank (lowest first)</option>
+                    </select>
+                </div>
+                <div class="filter-dropdown">
+                    <button class="filter-btn" id="filterBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                        </svg>
+                    </button>
+                    <div class="filter-menu" id="filterMenu">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                    <select class="filter-select hidden" id="filterSelect">
+                        <option value="">All Genres</option>
+                    </select><span class="filter-label" id="filterLabel"></span>
+                </div>
+                <button class="watchlist-toggle-btn" id="watchlistToggleBtn" title="Show Watchlist">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </button>
+                <div class="collections-toggle">
+                    <button class="collections-btn" id="collectionsBtn" title="Show Collections">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                            </path>
+                            <line x1="9" y1="12" x2="15" y2="12"></line>
+                            <line x1="9" y1="16" x2="13" y2="16"></line>
+                        </svg>
+                    </button>
+                </div>
+                <button class="insights-btn" id="insightsBtn" title="View Insights">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="20" x2="12" y2="10"></line>
+                        <line x1="18" y1="20" x2="18" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                        <circle cx="12" cy="6" r="2"></circle>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Home View -->
+            <div class="home-view" id="homeView" style="display: none;">
+                <!-- Category Shortcuts -->
+                <div class="home-section category-shortcuts-section">
+                    <!-- Large Preview Box -->
+                    <div class="category-preview-box" id="categoryPreviewBox" data-category="anime">
+                        <div class="category-preview-image-container">
+                            <img src="" alt="Anime" class="category-preview-img" id="preview-img">
+                            <div class="category-preview-overlay"><span class="category-preview-name"
+                                    id="preview-name">Anime</span>
+                                <button class="category-preview-upload-btn" title="Change Image">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" class="category-preview-upload" accept="image/*" hidden>
+                    </div>
+                    <!-- Small Category Boxes -->
+                    <div class="category-shortcuts-card">
+                        <div class="category-box" data-category="anime">
+                            <input type="file" class="category-upload" accept="image/*" hidden>
+                            <div class="category-image-container">
+                                <img src="" alt="Anime" class="category-img" id="img-anime">
+                                <div class="category-overlay"><span class="category-name">Anime</span>
+                                    <button class="category-upload-btn" title="Change Image">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="category-box" data-category="movies">
+                            <input type="file" class="category-upload" accept="image/*" hidden>
+                            <div class="category-image-container">
+                                <img src="" alt="Movies" class="category-img" id="img-movies">
+                                <div class="category-overlay"><span class="category-name">Movies</span>
+                                    <button class="category-upload-btn" title="Change Image">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="category-box" data-category="tv">
+                            <input type="file" class="category-upload" accept="image/*" hidden>
+                            <div class="category-image-container">
+                                <img src="" alt="Series" class="category-img" id="img-tv">
+                                <div class="category-overlay"><span class="category-name">Series</span>
+                                    <button class="category-upload-btn" title="Change Image">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="category-box" data-category="games">
+                            <input type="file" class="category-upload" accept="image/*" hidden>
+                            <div class="category-image-container">
+                                <img src="" alt="Games" class="category-img" id="img-games">
+                                <div class="category-overlay"><span class="category-name">Games</span>
+                                    <button class="category-upload-btn" title="Change Image">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="category-box" data-category="actors">
+                            <input type="file" class="category-upload" accept="image/*" hidden>
+                            <div class="category-image-container">
+                                <img src="" alt="People" class="category-img" id="img-actors">
+                                <div class="category-overlay"><span class="category-name">People</span>
+                                    <button class="category-upload-btn" title="Change Image">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Latest Trailers Section -->
+                <div class="home-section">
+                    <div class="home-row">
+                        <div class="home-row-header">
+                            <h3 class="home-row-title">Latest Trailers</h3>
+                        </div>
+                        <div class="home-row-content" id="latestTrailersRow">
+                            <div class="home-loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Movies Section -->
+                <div class="home-section">
+                    <!-- Combined Popular Movies Row -->
+                    <div class="home-row">
+                        <div class="home-row-header">
+                            <h3 class="home-row-title">Trending Movies</h3>
+                            <div class="home-row-scroll-controls">
+                                <button class="home-scroll-btn home-scroll-left"
+                                    data-target="moviesCombinedRow">‹</button>
+                                <button class="home-scroll-btn home-scroll-right"
+                                    data-target="moviesCombinedRow">›</button>
+                            </div>
+                        </div>
+                        <div class="home-row-content" id="moviesCombinedRow">
+                            <div class="home-loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Series Section -->
+                <div class="home-section">
+                    <!-- Combined Popular Series Row -->
+                    <div class="home-row">
+                        <div class="home-row-header">
+                            <h3 class="home-row-title">Trending Series</h3>
+                            <div class="home-row-scroll-controls">
+                                <button class="home-scroll-btn home-scroll-left" data-target="tvCombinedRow">‹</button>
+                                <button class="home-scroll-btn home-scroll-right" data-target="tvCombinedRow">›</button>
+                            </div>
+                        </div>
+                        <div class="home-row-content" id="tvCombinedRow">
+                            <div class="home-loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Anime Section -->
+                <div class="home-section">
+                    <!-- Top Airing Row -->
+                    <div class="home-row">
+                        <div class="home-row-header">
+                            <h3 class="home-row-title">Trending Animes</h3>
+                            <div class="home-row-scroll-controls">
+                                <button class="home-scroll-btn home-scroll-left" data-target="animeAiringRow">‹</button>
+                                <button class="home-scroll-btn home-scroll-right"
+                                    data-target="animeAiringRow">›</button>
+                            </div>
+                        </div>
+                        <div class="home-row-content" id="animeAiringRow">
+                            <div class="home-loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Games Section -->
+                <div class="home-section">
+                    <!-- Trending Games Row -->
+                    <div class="home-row">
+                        <div class="home-row-header">
+                            <h3 class="home-row-title">Trending Games</h3>
+                            <div class="home-row-scroll-controls">
+                                <button class="home-scroll-btn home-scroll-left"
+                                    data-target="gamesTrendingRow">‹</button>
+                                <button class="home-scroll-btn home-scroll-right"
+                                    data-target="gamesTrendingRow">›</button>
+                            </div>
+                        </div>
+                        <div class="home-row-content" id="gamesTrendingRow">
+                            <div class="home-loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- People Section -->
+                <div class="home-section">
+                    <!-- Popular People Row -->
+                    <div class="home-row">
+                        <div class="home-row-header">
+                            <h3 class="home-row-title">Popular People</h3>
+                            <div class="home-row-scroll-controls">
+                                <button class="home-scroll-btn home-scroll-left"
+                                    data-target="peoplePopularRow">‹</button>
+                                <button class="home-scroll-btn home-scroll-right"
+                                    data-target="peoplePopularRow">›</button>
+                            </div>
+                        </div>
+                        <div class="home-row-content" id="peoplePopularRow">
+                            <div class="home-loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Library View -->
+            <div class="library-view" id="libraryView">
+                <div class="grid-container" id="gridContainer">
+                    <!-- Grid items will be dynamically generated -->
+                </div>
+            </div>
+            <!-- Insights View -->
+            <div class="insights-view" id="insightsView" style="display: none;">
+                <div class="insights-header">
+                    <h2>Collection Insights</h2>
+                    <p class="insights-subtitle">A quick overview of your movies, TV series, anime, and games.</p>
+                </div>
+                <div class="insights-grid" id="insightsContent">
+                    <!-- Insights will be rendered here -->
+                </div>
+            </div>
+            <!-- Sequels View (for anime) -->
+            <div class="sequels-view" id="sequelsView" style="display: none;">
+                <div class="sequels-banner-container" id="sequelsBannerContainer" style="display: none;">
+                    <img class="sequels-banner-image" id="sequelsBannerImage" src="" alt="" />
+                    <div class="sequels-banner-overlay"></div>
+                </div>
+                <div class="sequels-header">
+                    <h2 id="sequelsTitle">Anime Sequels</h2><span id="sequelsItemCount"
+                        class="sequels-info-label"></span><span id="sequelsCompletionRate"
+                        class="sequels-info-label"></span>
+                </div>
+                <div class="grid-container" id="sequelsGridContainer">
+                    <!-- Sequels will be dynamically generated -->
+                </div>
+            </div>
+            <!-- Collection Creation View -->
+            <div class="collection-view" id="collectionView" style="display: none;">
+                <div class="collection-header">
+                    <h2 id="collectionTitle">Create New Collection</h2>
+                    <div class="collection-actions">
+                        <input type="text" class="collection-name-input" id="collectionNameInput"
+                            placeholder="Collection Name..." />
+                        <button class="save-collection-btn" id="saveCollectionBtn">Save Collection</button>
+                    </div>
+                </div>
+                <div class="collection-search-bar">
+                    <input type="text" class="collection-search-input" id="collectionSearchInput"
+                        placeholder="Search your library..." />
+                </div>
+                <div class="grid-container" id="collectionGridContainer">
+                    <!-- Items will be dynamically generated -->
+                </div>
+            </div>
+            <!-- Universal Search View -->
+            <div class="search-view" id="searchView" style="display: none;">
+                <div class="search-view-content">
+                    <!-- Filter Sidebar -->
+                    <div class="search-filters-sidebar" id="searchFiltersSidebar">
+                        <h3 class="search-filters-title">Filters</h3>
+                        <!-- Sort Filter -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Sort Results By</label>
+                            <div class="search-filter-select-wrapper">
+                                <select class="search-filter-select" id="searchFilterSort">
+                                    <option value="popularity.desc">Popularity Descending</option>
+                                    <option value="popularity.asc">Popularity Ascending</option>
+                                    <option value="rating.desc">Rating Descending</option>
+                                    <option value="rating.asc">Rating Ascending</option>
+                                    <option value="date.desc">Release Date Descending</option>
+                                    <option value="date.asc">Release Date Ascending</option>
+                                    <option value="title.asc">Title (A-Z)</option>
+                                    <option value="title.desc">Title (Z-A)</option>
+                                </select>
+                                <div class="search-filter-select-menu" id="searchFilterSortMenu">
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="popularity.desc">Popularity Descending</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="popularity.asc">Popularity Ascending</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="rating.desc">Rating Descending</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="rating.asc">Rating Ascending</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="date.desc">Release Date Descending</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="date.asc">Release Date Ascending</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="title.asc">Title (A-Z)</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="title.desc">Title (Z-A)</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Type Filter -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Type</label>
+                            <div class="search-filter-select-wrapper">
+                                <select class="search-filter-select" id="searchFilterType">
+                                    <option value="">All Types</option>
+                                    <option value="movies">Movies</option>
+                                    <option value="tv">TV Series</option>
+                                    <option value="anime">Anime</option>
+                                    <option value="games">Games</option>
+                                    <option value="actors">People</option>
+                                </select>
+                                <div class="search-filter-select-menu" id="searchFilterTypeMenu">
+                                    <button type="button" class="search-filter-select-option" data-value="">All
+                                        Types
+                                    </button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="movies">Movies</button>
+                                    <button type="button" class="search-filter-select-option" data-value="tv">TV
+                                        Series
+                                    </button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="anime">Anime</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="games">Games</button>
+                                    <button type="button" class="search-filter-select-option"
+                                        data-value="actors">People</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Title/Name Filter -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Title/Name</label>
+                            <input type="text" class="search-filter-input" id="searchFilterTitle"
+                                placeholder="Search by title..." />
+                        </div>
+                        <!-- Genre Filter -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Genres</label>
+                            <div class="search-filter-tags" id="searchFilterGenreTags">
+                                <button type="button" class="genre-tag" data-value="action">Action</button>
+                                <button type="button" class="genre-tag" data-value="adventure">Adventure</button>
+                                <button type="button" class="genre-tag" data-value="animation">Animation</button>
+                                <button type="button" class="genre-tag" data-value="comedy">Comedy</button>
+                                <button type="button" class="genre-tag" data-value="crime">Crime</button>
+                                <button type="button" class="genre-tag" data-value="documentary">Documentary</button>
+                                <button type="button" class="genre-tag" data-value="drama">Drama</button>
+                                <button type="button" class="genre-tag" data-value="family">Family</button>
+                                <button type="button" class="genre-tag" data-value="fantasy">Fantasy</button>
+                                <button type="button" class="genre-tag" data-value="history">History</button>
+                                <button type="button" class="genre-tag" data-value="horror">Horror</button>
+                                <button type="button" class="genre-tag" data-value="music">Music</button>
+                                <button type="button" class="genre-tag" data-value="mystery">Mystery</button>
+                                <button type="button" class="genre-tag" data-value="romance">Romance</button>
+                                <button type="button" class="genre-tag" data-value="science fiction">Science
+                                    Fiction</button>
+                                <button type="button" class="genre-tag" data-value="tv movie">TV Movie</button>
+                                <button type="button" class="genre-tag" data-value="thriller">Thriller</button>
+                                <button type="button" class="genre-tag" data-value="war">War</button>
+                                <button type="button" class="genre-tag" data-value="western">Western</button>
+                            </div>
+                            <input type="hidden" id="searchFilterGenre" value="" />
+                        </div>
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Rating (0-100)</label>
+                            <div class="runtime-slider-container">
+                                <div class="slider-track-bg"></div>
+                                <div class="slider-track-fill" id="ratingTrackFill"></div>
+                                <input type="range" class="slider-range min-range" id="ratingRangeMin" min="0" max="100"
+                                    value="0" step="5" style="z-index: 4;">
+                                <input type="range" class="slider-range max-range" id="ratingRangeMax" min="0" max="100"
+                                    value="100" step="5" style="z-index: 4;">
+                                <div class="slider-ticks">
+                                    <span>0</span>
+                                    <span>25</span>
+                                    <span>50</span>
+                                    <span>75</span>
+                                    <span>100</span>
+                                </div>
+                                <div class="slider-values-display" id="ratingValuesDisplay">0 - 100</div>
+                            </div>
+                        </div>
+                        <!-- Release Date Filter -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Release Date</label>
+                            <div class="search-filter-date-range">
+                                <input type="date" class="search-filter-input" id="searchFilterDateStart"
+                                    placeholder="Start Date" />
+                                <input type="date" class="search-filter-input" id="searchFilterDateEnd"
+                                    placeholder="End Date" />
+                            </div>
+                        </div>
+                        <!-- Runtime Filter (for movies) -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Runtime (minutes)</label>
+                            <div class="runtime-slider-container">
+                                <div class="slider-track-bg"></div>
+                                <div class="slider-track-fill" id="runtimeTrackFill"></div>
+                                <input type="range" class="slider-range min-range" id="runtimeRangeMin" min="0" max="5"
+                                    value="0" step="1">
+                                <input type="range" class="slider-range max-range" id="runtimeRangeMax" min="0" max="5"
+                                    value="5" step="1">
+                                <div class="slider-ticks">
+                                    <span>0</span>
+                                    <span>24</span>
+                                    <span>60</span>
+                                    <span>120</span>
+                                    <span>240</span>
+                                    <span>360</span>
+                                </div>
+                                <div class="slider-values-display" id="runtimeValuesDisplay">0 - 360+ min</div>
+                            </div>
+                            <!-- Hidden inputs for compatibility if needed, or we just rely on IDs in JS -->
+                        </div>
+                        <!-- Episodes Filter (for TV/Anime) -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Episodes</label>
+                            <div class="search-filter-range">
+                                <input type="number" class="search-filter-input" id="searchFilterEpisodesMin"
+                                    placeholder="Min" min="0" /><span class="search-filter-range-separator">-</span>
+                                <input type="number" class="search-filter-input" id="searchFilterEpisodesMax"
+                                    placeholder="Max" min="0" />
+                            </div>
+                        </div>
+                        <!-- User Votes Filter -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Minimum User Votes</label>
+                            <select class="search-filter-input" id="searchFilterVotes">
+                                <option value="0">Any</option>
+                                <option value="100">100+</option>
+                                <option value="500">500+</option>
+                                <option value="1000">1,000+</option>
+                                <option value="5000">5,000+</option>
+                                <option value="10000">10,000+</option>
+                                <option value="50000">50,000+</option>
+                                <option value="100000">100,000+</option>
+                            </select>
+                        </div>
+                        <!-- Developer/Studio Filter -->
+                        <div class="search-filter-group">
+                            <label class="search-filter-label">Developer/Studio</label>
+                            <input type="text" class="search-filter-input" id="searchFilterDeveloper"
+                                placeholder="e.g. Studio Name..." />
+                        </div>
+                        <!-- Filter Actions -->
+                        <div class="search-filter-actions">
+                            <button class="search-filter-btn search-filter-btn-primary" id="searchFilterApply">Apply
+                                Filters
+                            </button>
+                            <button class="search-filter-btn search-filter-btn-secondary"
+                                id="searchFilterReset">Reset</button>
+                        </div>
+                    </div>
+                    <!-- Results Container -->
+                    <div class="search-results-wrapper">
+                        <div class="search-header">
+                            <h2 id="searchTitle">Search Results</h2><span id="searchQuery" class="search-query"></span>
+                        </div>
+                        <div class="search-results-container">
+                            <!-- Movies Section -->
+                            <div class="search-section" id="searchMoviesSection" style="display: none;">
+                                <h3 class="search-section-title">Movies</h3>
+                                <div class="grid-container" id="searchMoviesGrid">
+                                    <!-- Movie results will be populated here -->
+                                </div>
+                            </div>
+                            <!-- TV Series Section -->
+                            <div class="search-section" id="searchTvSection" style="display: none;">
+                                <h3 class="search-section-title">TV Series</h3>
+                                <div class="grid-container" id="searchTvGrid">
+                                    <!-- TV results will be populated here -->
+                                </div>
+                            </div>
+                            <!-- Anime Section -->
+                            <div class="search-section" id="searchAnimeSection" style="display: none;">
+                                <h3 class="search-section-title">Anime</h3>
+                                <div class="grid-container" id="searchAnimeGrid">
+                                    <!-- Anime results will be populated here -->
+                                </div>
+                            </div>
+                            <!-- Games Section -->
+                            <div class="search-section" id="searchGamesSection" style="display: none;">
+                                <h3 class="search-section-title">Games</h3>
+                                <div class="grid-container" id="searchGamesGrid">
+                                    <!-- Game results will be populated here -->
+                                </div>
+                            </div>
+                            <!-- Actors Section -->
+                            <div class="search-section" id="searchActorsSection" style="display: none;">
+                                <h3 class="search-section-title">Actors</h3>
+                                <div class="grid-container" id="searchActorsGrid">
+                                    <!-- Actor results will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div id="searchLoading" style="display: none; text-align: center; padding: 2rem;">
+                            <p>Searching across all APIs...</p>
+                        </div>
+                        <div id="searchError" style="display: none; text-align: center; padding: 2rem; color: #ff6666;">
+                            <p>Error loading search results</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Detail View -->
+            <div class="detail-view" id="detailView" style="display: none;">
+                <!-- Layout Editor Controls -->
+                <div class="layout-editor-controls" id="layoutEditorControls" style="display: none;">
+                    <div class="layout-editor-header">
+                        <h3>Layout Editor</h3>
+                        <div class="layout-editor-actions">
+                            <button class="layout-btn" id="saveLayoutBtn">💾 Save Layout</button>
+                            <button class="layout-btn" id="resetLayoutBtn">🔄 Reset to Default</button>
+                            <button class="layout-btn layout-btn-close" id="closeLayoutEditorBtn">✖ Close
+                                Editor
+                            </button>
+                        </div>
+                    </div>
+                    <div class="layout-editor-info">
+                        <p>📌 Drag sections to move them | 📏 Use the controls below to resize</p>
+                    </div>
+                </div>
+                <!-- Edit Layout Button -->
+                <button class="edit-layout-btn" id="editLayoutBtn" style="display: none;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Edit Layout
+                </button>
+                <!-- Hidden file inputs for upload -->
+                <input type="file" id="detailPosterUpload" accept="image/*" style="display: none;" />
+                <input type="file" id="detailBannerUpload" accept="image/*" style="display: none;" />
+                <input type="file" id="collectionPosterUpload" accept="image/*" style="display: none;" />
+                <input type="file" id="collectionBannerUpload" accept="image/*" style="display: none;" />
+                <div class="hero-banner">
+                    <img class="banner-image" id="bannerImage" src="" alt="" />
+                    <div class="banner-overlay"></div>
+                </div>
+                <div class="detail-content" id="detailContentContainer">
+                    <div class="detail-poster-container"
+                        style="--grid-row: 1; --grid-col: 1; --grid-row-span: 1; --grid-col-span: 1;">
+                        <img class="detail-poster" id="detailPoster" src="" alt="" />
+                        <!-- Actor-specific info (only visible for actors) -->
+                        <div class="actor-info" id="actorInfo" style="display: none;">
+                            <div class="actor-roles" id="actorRoles"></div>
+                            <div class="actor-social-media" id="actorSocialMedia"></div>
+                        </div>
+                    </div>
+                    <div class="detail-info" id="detailInfo"
+                        style="--grid-row: 1; --grid-col: 2; --grid-row-span: 1; --grid-col-span: 2;">
+                        <h2 class="detail-title" id="detailTitle"></h2>
+                        <div class="detail-meta-with-score">
+                            <div class="detail-score-circle" id="detailScoreCircle" style="display: none;">
+                                <svg class="score-svg" viewBox="0 0 100 100">
+                                    <circle class="score-circle-bg" cx="50" cy="50" r="45"></circle>
+                                    <circle class="score-circle-fill" cx="50" cy="50" r="45"></circle>
+                                </svg>
+                                <div class="score-text"><span class="score-number" id="scoreNumber">0</span><span
+                                        class="score-percent">%</span>
+                                </div>
+                            </div>
+                            <div class="detail-meta" id="detailMeta"></div>
+                        </div>
+                        <p class="detail-description" id="detailDescription"></p>
+                        <div class="detail-rating"><span class="rating-label">Your Rank:</span>
+                            <div class="star-rating" id="starRating"><span class="star" data-rating="1">★</span><span
+                                    class="star" data-rating="2">★</span><span class="star"
+                                    data-rating="3">★</span><span class="star" data-rating="4">★</span><span
+                                    class="star" data-rating="5">★</span>
+                                <div class="rating-tooltip" aria-hidden="true" style="display:none;"></div>
+                            </div>
+                        </div>
+                        <!-- Watchlist Button (hidden for actors) -->
+                        <button class="watchlist-btn" id="watchlistBtn" style="display: none;" title="Add to Watchlist">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                            </svg><span class="watchlist-btn-text">Add to Watchlist</span>
+                        </button>
+                        <div class="detail-creator-info" id="detailCreatorInfo" style="display: none;"><span
+                                class="creator-label" id="creatorLabel"></span><span class="creator-value"
+                                id="creatorValue"></span>
+                        </div>
+                        <div class="detail-extra-meta" id="detailExtraMeta" style="display: none;"></div>
+                    </div>
+                    <!-- Trailer Section (large on left, spans 2 rows) -->
+                    <div class="detail-trailer-section" id="detailTrailerSection"
+                        style="--grid-row: 2; --grid-col: 1; --grid-row-span: 1; --grid-col-span: 2; display: none;">
+                        <h3 class="section-title">Trailer</h3>
+                        <div class="trailer-container" id="trailerContainer">
+                            <!-- Trailer will be embedded here -->
+                        </div>
+                    </div>
+                    <!-- Sidebar column containing cast, anime relations, and information -->
+                    <div class="detail-sidebar-column" id="detailSidebarColumn"
+                        style="--grid-row: 2; --grid-col: 3; --grid-row-span: 3; --grid-col-span: 1; display: none;">
+                        <!-- Cast/Characters section -->
+                        <div class="cast-characters-container" id="castCharactersContainer" style="display: none;">
+                            <h3 id="castCharactersTitle"></h3>
+                            <div class="cast-characters-grid" id="castCharactersGrid">
+                                <!-- Cast/Characters will be populated here -->
+                            </div>
+                        </div>
+                        <!-- Anime Relations: Sequel and Prequel -->
+                        <div class="anime-relations-container" id="animeRelationsContainer" style="display: none;">
+                            <div class="anime-sequel-container">
+                                <h3>Sequel</h3>
+                                <div class="anime-sequel-grid" id="animeSequelGrid">
+                                    <!-- Sequel anime posters will be populated here -->
+                                </div>
+                            </div>
+                            <div class="anime-prequel-container">
+                                <h3>Prequel</h3>
+                                <div class="anime-prequel-grid" id="animePrequelGrid">
+                                    <!-- Prequel anime posters will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Game Relations: DLC and Related Games -->
+                        <div class="game-relations-container" id="gameRelationsContainer" style="display: none;">
+                            <div class="game-dlc-container">
+                                <h3>DLC</h3>
+                                <div class="game-dlc-grid" id="gameDlcGrid">
+                                    <!-- DLC game posters will be populated here -->
+                                </div>
+                            </div>
+                            <div class="game-similar-container">
+                                <h3>Related Games</h3>
+                                <div class="game-similar-grid" id="gameSimilarGrid">
+                                    <!-- Similar game posters will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Information Sidebar -->
+                        <div class="detail-information-sidebar" id="detailInformationSidebar" style="display: none;">
+                            <h3 class="section-title">Information</h3>
+                            <div class="information-content" id="informationContent">
+                                <!-- Information will be populated here based on type -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Recommendations Section (full width below trailer) -->
+                    <div class="detail-recommendations-section" id="detailRecommendationsSection"
+                        style="--grid-row: 3; --grid-col: 1; --grid-row-span: 1; --grid-col-span: 2; display: none;">
+                        <h3 class="section-title">Recommendations</h3>
+                        <div class="recommendations-container" id="recommendationsContainer">
+                            <!-- Recommendations will be populated here -->
+                        </div>
+                    </div>
+                    <!-- Reviews Section (full width below recommendations) -->
+                    <div class="detail-reviews-section" id="detailReviewsSection"
+                        style="--grid-row: 4; --grid-col: 1; --grid-row-span: 1; --grid-col-span: 2; display: none;">
+                        <h3 class="section-title">Reviews</h3>
+                        <div class="reviews-container" id="reviewsContainer">
+                            <!-- Reviews will be populated here -->
+                        </div>
+                    </div>
+                    <!-- Actor-specific: Linked Movies/TV on the right -->
+                    <div class="actor-linked-movies" id="actorLinkedMoviesContainer" style="display: none;">
+                        <h2 class="actor-title" id="actorTitle"></h2>
+                        <div class="actor-biography-wrapper" id="actorBiographyWrapper" style="display: none;">
+                            <h3 class="biography-heading">Biography</h3>
+                            <div class="actor-biography" id="actorBiography"></div>
+                            <button class="read-more-btn" id="readMoreBtn" style="display: none;">Read More</button>
+                        </div>
+                        <div class="spotify-player-section" id="spotifyPlayerSection" style="display: none;">
+                            <h3>Top Tracks</h3>
+                            <div id="spotifyPlayerContainer"></div>
+                        </div>
+                        <h3 id="knownForHeading">Known For</h3>
+                        <div class="linked-movies-grid" id="linkedMoviesGrid">
+                            <!-- Linked movies will be populated here -->
+                        </div>
+                        <div class="actor-interviews-section" id="actorInterviewsSection" style="display: none;">
+                            <h3>Latest Interviews</h3>
+                            <div class="interviews-grid" id="interviewsGrid">
+                                <!-- YouTube interviews will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <!-- Delete Mode Controls -->
+        <div class="delete-controls" id="deleteControls" style="display: none;">
+            <button class="confirm-delete-btn" id="confirmDeleteBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg><span>Delete Selected</span>
+            </button>
+            <button class="cancel-delete-btn" id="cancelDeleteBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg><span>Cancel</span>
+            </button>
+        </div>
+        <!-- Image Selection Modal -->
+        <div class="modal" id="imageSelectModal">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3 id="imageSelectTitle">Select Image</h3>
+                    <button class="close-btn" id="closeImageModal">✖</button>
+                </div>
+                <div class="modal-tabs">
+                    <button type="button" class="modal-tab active" id="posterTab">Posters</button>
+                    <button type="button" class="modal-tab" id="bannerTab">Banners</button>
+                </div>
+                <div class="modal-form" style="padding: 1rem;">
+                    <div id="animeSearchContainer" style="display: none; margin-bottom: 1rem;">
+                        <input type="text" id="animeSearchInput" placeholder="Search for anime on TMDB..."
+                            style="width: 100%; padding: 0.5rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color);" />
+                    </div>
+                    <div class="image-selection-grid" id="imageSelectionGrid">
+                        <!-- Images will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Trailer Modal -->
+        <div id="trailerModal" class="trailer-modal" style="display: none;">
+            <div class="trailer-modal-content">
+                <button id="closeTrailerModal" class="trailer-modal-close">&times;</button>
+                <iframe id="trailerIframe" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+            </div>
+        </div>
+    </div>
+    </div>
+    <!-- Layout Editor Overlay Layer -->
+    <div id="editorOverlay" class="editor-overlay" style="display: none;">
+        <!-- Selection Box (created dynamically or reused) -->
+        <div id="editorSelectionBox" class="editor-selection-box" style="display: none;">
+            <div class="resize-handle nw" data-handle="nw"></div>
+            <div class="resize-handle n" data-handle="n"></div>
+            <div class="resize-handle ne" data-handle="ne"></div>
+            <div class="resize-handle e" data-handle="e"></div>
+            <div class="resize-handle se" data-handle="se"></div>
+            <div class="resize-handle s" data-handle="s"></div>
+            <div class="resize-handle sw" data-handle="sw"></div>
+            <div class="resize-handle w" data-handle="w"></div>
+            <div class="selection-label"></div>
+        </div>
+    </div>
+    <!-- Layout Editor Floating Toolbar -->
+    <div id="editorToolbar" class="editor-toolbar glass-panel" style="display: none;">
+        <div class="toolbar-header"><span class="toolbar-title">Properties</span>
+            <div class="toolbar-actions">
+                <button id="editorUndoBtn" title="Undo">↩</button>
+                <button id="editorRedoBtn" title="Redo">↪</button>
+                <button id="editorSaveBtn" class="primary-btn small">Save</button>
+                <button id="editorCloseBtn" class="icon-btn">✖</button>
+            </div>
+        </div>
+        <div class="toolbar-content">
+            <!-- Typography Group -->
+            <div class="tool-group" id="toolGroupType">
+                <label>Typography</label>
+                <div class="tool-row">
+                    <input type="number" id="propFontSize" placeholder="16" min="8" max="100" title="Font Size (px)">
+                    <select id="propFontFamily" title="Font Family">
+                        <option value="inherit">Default</option>
+                        <option value="Inter, sans-serif">Inter</option>
+                        <option value="Roboto, sans-serif">Roboto</option>
+                        <option value="'Courier New', monospace">Mono</option>
+                        <option value="serif">Serif</option>
+                    </select>
+                </div>
+                <div class="tool-row">
+                    <button class="tool-btn" data-prop="fontWeight" data-val="bold" title="Bold">
+                        <b>B</b>
+                    </button>
+                    <button class="tool-btn" data-prop="fontStyle" data-val="italic" title="Italic">
+                        <i>I</i>
+                    </button>
+                    <button class="tool-btn" data-prop="textDecoration" data-val="underline" title="Underline">
+                        <u>U</u>
+                    </button>
+                    <input type="color" id="propColor" title="Text Color">
+                </div>
+            </div>
+            <!-- Alignment Group -->
+            <div class="tool-group">
+                <label>Align</label>
+                <div class="tool-row">
+                    <button class="tool-btn" data-prop="textAlign" data-val="left" title="Left">⇤</button>
+                    <button class="tool-btn" data-prop="textAlign" data-val="center" title="Center">↔</button>
+                    <button class="tool-btn" data-prop="textAlign" data-val="right" title="Right">⇥</button>
+                </div>
+            </div>
+            <!-- Layout Group -->
+            <div class="tool-group">
+                <label>Layout</label>
+                <div class="tool-row">
+                    <button class="tool-btn" id="propBringFront" title="Bring to Front">▲</button>
+                    <button class="tool-btn" id="propSendBack" title="Send to Back">▼</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <!-- Scroll-to-top button (visible only on Library view) -->
+    <button id="scrollTopBtn" class="scroll-top-btn" aria-label="Scroll to top">↑</button>
+    <script src="/script.js?v=2"></script>

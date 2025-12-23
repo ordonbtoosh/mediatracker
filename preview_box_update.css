@@ -1,0 +1,66 @@
+﻿
+/* Category Preview Box - Updated (No hover effects, no upload button) */
+.category-preview-box {
+    position: relative;
+    cursor: pointer;
+    border-radius: 16px;
+    overflow: hidden;
+    aspect-ratio: 21/9;
+    background-color: var(--card-bg);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    transition: box-shadow 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.category-preview-box:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+.category-preview-box.active {
+    border: 2px solid var(--hover-color);
+}
+
+.category-preview-image-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.category-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 40%, rgba(0, 0, 0, 0.1) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2rem;
+    pointer-events: none;
+}
+
+.category-preview-name {
+    color: var(--title-color);
+    font-size: 2rem;
+    font-weight: bold;
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.9);
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-preview-name.transitioning {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+/* Hide upload button for preview box */
+.category-preview-upload-btn {
+    display: none !important;
+}

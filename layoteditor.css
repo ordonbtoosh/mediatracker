@@ -1,0 +1,295 @@
+/* =========================================
+   LAYOUT EDITOR STYLES
+   ========================================= */
+
+/* Overlay Container */
+.editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    /* Let clicks pass through to select elements initially */
+    z-index: 9000;
+}
+
+/* Selection Box */
+.editor-selection-box {
+    position: absolute;
+    border: 2px solid var(--primary-color);
+    background-color: rgba(229, 9, 20, 0.1);
+    /* Primary color low opacity */
+    pointer-events: all;
+    /* Catch interactions for dragging */
+    cursor: move;
+    z-index: 9001;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.editor-selection-box .selection-label {
+    position: absolute;
+    top: -24px;
+    left: 0;
+    background: var(--primary-color);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px 4px 0 0;
+    white-space: nowrap;
+}
+
+/* Resize Handles */
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border: 1px solid var(--primary-color);
+    border-radius: 50%;
+    z-index: 9002;
+    pointer-events: all;
+}
+
+.resize-handle.nw {
+    top: -5px;
+    left: -5px;
+    cursor: nw-resize;
+}
+
+.resize-handle.n {
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: n-resize;
+}
+
+.resize-handle.ne {
+    top: -5px;
+    right: -5px;
+    cursor: ne-resize;
+}
+
+.resize-handle.e {
+    top: 50%;
+    right: -5px;
+    transform: translateY(-50%);
+    cursor: e-resize;
+}
+
+.resize-handle.se {
+    bottom: -5px;
+    right: -5px;
+    cursor: se-resize;
+}
+
+.resize-handle.s {
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: s-resize;
+}
+
+.resize-handle.sw {
+    bottom: -5px;
+    left: -5px;
+    cursor: sw-resize;
+}
+
+.resize-handle.w {
+    top: 50%;
+    left: -5px;
+    transform: translateY(-50%);
+    cursor: w-resize;
+}
+
+/* Mobile Handle Adjustment (Larger touch targets) */
+@media (max-width: 768px) {
+    .resize-handle {
+        width: 20px;
+        height: 20px;
+        top: -10px;
+        left: -10px;
+        /* Adjust offsets */
+    }
+
+    .resize-handle.n {
+        top: -10px;
+    }
+
+    .resize-handle.ne {
+        top: -10px;
+        right: -10px;
+        left: auto;
+    }
+
+    .resize-handle.e {
+        right: -10px;
+    }
+
+    .resize-handle.se {
+        bottom: -10px;
+        right: -10px;
+        left: auto;
+        top: auto;
+    }
+
+    .resize-handle.s {
+        bottom: -10px;
+    }
+
+    .resize-handle.sw {
+        bottom: -10px;
+        left: -10px;
+        right: auto;
+        top: auto;
+    }
+
+    .resize-handle.w {
+        left: -10px;
+    }
+}
+
+/* Floating Toolbar */
+.editor-toolbar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    z-index: 9100;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.toolbar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+}
+
+.toolbar-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.toolbar-actions button {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.toolbar-actions button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.toolbar-actions button.primary-btn {
+    background: var(--primary-color);
+    font-size: 12px;
+    padding: 6px 12px;
+    font-weight: 600;
+}
+
+.toolbar-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tool-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tool-group label {
+    font-size: 10px;
+    color: #666;
+    font-weight: 600;
+}
+
+.tool-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.tool-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tool-btn:hover,
+.tool-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.tool-row input[type="number"],
+.tool-row select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 4px;
+    padding: 6px;
+    font-size: 12px;
+    width: 60px;
+}
+
+.tool-row select {
+    width: 100px;
+}
+
+.tool-row input[type="color"] {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+/* Layout Edit Mode Tweak - Make all elements selectable */
+.layout-edit-mode .detail-content * {
+    /* We don't want to break existing layouts, but we need to know what's hoverable.
+       The JS will handle selection logic, but visual cues help. */
+    cursor: default;
+}
+
+.editable-element-hover {
+    outline: 2px dashed rgba(229, 9, 20, 0.5);
+    outline-offset: -2px;
+}

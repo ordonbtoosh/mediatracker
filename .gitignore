@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Database (we use GitHub storage now)
+*.duckdb
+*.duckdb.wal
+
+# Local config with secrets
+server/github-config.json
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+
+# Pinegrow
+_pgbackup/
+_pginfo/
+pinegrow.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.log
+temp.ps1

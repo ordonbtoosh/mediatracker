@@ -1,0 +1,1413 @@
+/* =========================================
+   MOBILE RESPONSIVENESS
+   ========================================= */
+@media (max-width: 768px) {
+
+    /* =========================================
+       SECTION 1: APP CONTAINER & LAYOUT
+       ========================================= */
+
+    .app-container {
+        width: 100%;
+        margin: 0;
+        padding: 0 1rem 80px 1rem;
+        overflow-x: hidden;
+    }
+
+    /* =========================================
+       SECTION 2: TOP BAR
+       ========================================= */
+
+    .top-bar {
+        padding: 0.5rem 0;
+        margin-bottom: 0.5rem;
+    }
+
+    .top-bar-left {
+        gap: 0.5rem;
+    }
+
+    .top-bar-right {
+        gap: 0.5rem;
+    }
+
+    .app-title {
+        font-size: 1.2rem;
+    }
+
+    .delete-mode-indicator {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+    }
+
+    .nav-menu-btn {
+        margin-left: 0.5rem;
+        width: 32px;
+        height: 32px;
+    }
+
+    /* =========================================
+       SECTION 3: NAVIGATION SLIDE MENU
+       ========================================= */
+
+    .nav-slide-menu.show {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: none;
+        background: var(--bg-color);
+        flex-direction: column;
+        padding: 2rem;
+        align-items: flex-start;
+        margin: 0;
+        z-index: 10000;
+    }
+
+    .nav-menu-item {
+        width: 100%;
+        text-align: left;
+        padding: 1rem;
+        font-size: 1.2rem;
+        justify-content: flex-start;
+    }
+
+    /* =========================================
+       SECTION 4: BACK BUTTON
+       ========================================= */
+
+    .back-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+    }
+
+    /* =========================================
+       SECTION 5: SEARCH
+       ========================================= */
+
+    .search-container {
+        gap: 0.25rem;
+    }
+
+    .search-input {
+        width: 120px;
+        font-size: 0.9rem;
+        padding: 0.4rem;
+        height: 36px;
+    }
+
+    /* =========================================
+       SECTION 6: SETTINGS BUTTON
+       ========================================= */
+
+    .settings-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+    }
+
+    /* =========================================
+       SECTION 7: TABS ROW
+       ========================================= */
+
+    .tabs-row {
+        margin-top: 1vh;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tab-btn {
+        font-size: 1.2rem;
+        padding: 8px 16px;
+        min-width: auto;
+    }
+
+    .tab-btn.active {
+        font-size: 1.5rem;
+    }
+
+    /* =========================================
+       SECTION 8: CONTROLS ROW (Bottom Dock)
+       ========================================= */
+
+    .controls-row {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: auto;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 1.5rem;
+        z-index: 9999;
+        margin: 0;
+        transform: none;
+        top: auto;
+    }
+
+    body.tab-home .controls-row {
+        display: flex !important;
+    }
+
+    .controls-left,
+    .controls-right {
+        display: contents !important;
+    }
+
+    /* =========================================
+       SECTION 9: CONTROL BUTTONS
+       ========================================= */
+
+    .insights-btn,
+    .sort-btn,
+    .filter-btn,
+    .watchlist-toggle-btn,
+    .collections-btn,
+    .edit-btn,
+    .delete-btn,
+    .add-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+    }
+
+
+
+    .watchlist-toggle-btn {
+        margin-top: 0;
+    }
+
+    .watchlist-toggle-btn::after {
+        display: none;
+    }
+
+    /* =========================================
+       SECTION 10: FILTER LABEL
+       ========================================= */
+
+    .filter-label {
+        display: none !important;
+    }
+
+    /* =========================================
+       SECTION 11: DROPDOWN MENUS
+       ========================================= */
+
+    .add-menu {
+        position: fixed;
+        bottom: 80px;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90vw;
+        max-width: 400px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .sort-menu {
+        position: fixed;
+        bottom: 80px;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        min-width: 200px;
+    }
+
+    .filter-menu {
+        position: fixed;
+        bottom: 80px;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        min-width: 200px;
+    }
+
+    .settings-menu {
+        top: 100%;
+        bottom: auto;
+        right: 0;
+        left: auto;
+        transform: none;
+        margin-top: 8px;
+        position: absolute;
+        min-width: 250px;
+        z-index: 10002;
+    }
+
+    /* =========================================
+       SECTION 12: DETAIL SETTINGS
+       ========================================= */
+
+    .detail-settings-menu {
+        top: 100%;
+        bottom: auto;
+        right: 0;
+        left: auto;
+        transform: none;
+        margin-top: 8px;
+        position: absolute;
+        min-width: 220px;
+        z-index: 10002;
+    }
+
+    .detail-settings-btn {
+        width: 36px;
+        height: 36px;
+        transform: none;
+    }
+
+    /* =========================================
+       SECTION 13: MAIN CONTENT
+       ========================================= */
+
+    .main-content {
+        padding: 0;
+    }
+
+    /* =========================================
+       SECTION 14: GRID CONTAINER
+       ========================================= */
+
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    .library-view .grid-container {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+    }
+
+    .sequels-view .grid-container {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    .collection-view .grid-container {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    /* =========================================
+       SECTION 15: GRID ITEMS
+       ========================================= */
+
+    .grid-item {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        aspect-ratio: 2/3;
+        transform: none;
+    }
+
+    .grid-item:hover {
+        transform: scale(1.02);
+    }
+
+    .grid-item-visual {
+        width: 100%;
+        border-radius: 6px;
+    }
+
+    .grid-item-name {
+        font-size: 0.85rem;
+        padding: 0.4rem;
+    }
+
+    .grid-item-overlay {
+        border-radius: 6px;
+    }
+
+    .grid-item-rank {
+        font-size: 0.7rem;
+    }
+
+    .grid-item-rank-stars {
+        gap: 0.05rem;
+    }
+
+    .grid-item-rank-star {
+        font-size: 0.5rem;
+    }
+
+    .grid-item-user-score {
+        font-size: 0.5rem;
+    }
+
+    /* =========================================
+       SECTION 16: LIBRARY VIEW GRID
+       ========================================= */
+
+    .library-view .grid-item {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        transform: none;
+    }
+
+    .library-view .grid-item:nth-child(n) {
+        grid-column: auto !important;
+    }
+
+    /* =========================================
+       SECTION 17-18: SEQUELS & COLLECTION VIEW
+       ========================================= */
+
+    .sequels-view .grid-item {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    .collection-view .grid-container .grid-item {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    /* =========================================
+       SECTION 19-22: COLLECTIONS & DELETE MODE
+       ========================================= */
+
+    .collection-buttons-container {
+        gap: 0.25rem;
+    }
+
+    .delete-controls {
+        bottom: 90px;
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+
+    .confirm-delete-btn,
+    .cancel-delete-btn {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    /* =========================================
+       SECTION 23: DETAIL VIEW
+       ========================================= */
+
+    .detail-view {
+        margin-top: 0;
+    }
+
+    .detail-view .detail-content:not(.actor-layout) {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0;
+        padding: 0 1rem;
+        margin-top: -100px !important;
+    }
+
+    .detail-view .detail-content:not(.actor-layout)>* {
+        grid-area: auto !important;
+        grid-column: auto !important;
+        grid-row: auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        transform: none !important;
+        max-width: none !important;
+    }
+
+    /* =========================================
+       SECTION 24: DETAIL POSTER
+       ========================================= */
+
+    .detail-view .detail-content:not(.actor-layout) .detail-poster-container {
+        order: 1;
+        width: 35% !important;
+        display: flex;
+        justify-content: center;
+        margin: 3.5rem 0 0 0 !important;
+        min-height: 200px;
+        transform: translateX(-20px) !important;
+    }
+
+    .detail-view .detail-content:not(.actor-layout) .detail-poster {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 2/3;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .detail-view:not(.collection-view) .detail-poster {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    /* =========================================
+       SECTION 25: DETAIL INFO
+       ========================================= */
+
+    .detail-view .detail-content:not(.actor-layout) .detail-info {
+        order: 2;
+        flex: 1 !important;
+        width: 65% !important;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        text-align: left;
+        padding: 4.2rem 0 0 1rem;
+        margin-left: -20px !important;
+        align-content: flex-start;
+        align-items: center;
+    }
+
+    .detail-title {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.25rem;
+        line-height: 1.1;
+        order: 1;
+        width: 100% !important;
+        transform: none !important;
+    }
+
+    .detail-description {
+        order: 2;
+        font-size: 0.85rem !important;
+        color: #b3b3b3;
+        font-family: var(--font-family) !important;
+        margin-bottom: 0.1rem !important;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 3 !important;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        width: 100% !important;
+        height: 10rem !important;
+        transform: none !important;
+    }
+
+    .detail-rating {
+        order: 3;
+        width: auto !important;
+        transform: none !important;
+        margin-bottom: 0.5rem;
+        margin-right: 1rem;
+    }
+
+    .detail-rating .star {
+        font-size: 1.8rem !important;
+    }
+
+    .detail-meta {
+        font-size: 0.8rem !important;
+        margin-bottom: 0.5rem;
+        order: 5;
+        width: 100% !important;
+        transform: none !important;
+        display: none !important;
+    }
+
+    .detail-meta-with-score {
+        display: contents !important;
+    }
+
+    .detail-score-circle {
+        order: 4;
+        width: auto !important;
+        margin-bottom: 0.5rem;
+        transform: translateX(-220px) !important;
+    }
+
+    .watchlist-btn {
+        order: 6;
+        font-size: 1rem !important;
+        margin-top: -3.3rem;
+        margin-left: 11.5rem;
+        transform: none !important;
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        justify-content: center;
+        align-items: center;
+
+        z-index: 10;
+        color: white !important;
+        position: static !important;
+    }
+
+
+    .watchlist-btn .watchlist-btn-text {
+        display: none !important;
+    }
+
+    .watchlist-btn svg {
+        width: 20px;
+        height: 20px;
+        margin: 0 !important;
+    }
+
+    /* =========================================
+       SECTION 26: SCORE CIRCLE
+       ========================================= */
+
+    .detail-score-circle {
+        width: 45px;
+        height: 45px;
+    }
+
+    .score-number {
+        font-size: 0.85rem;
+    }
+
+    .score-percent {
+        font-size: 0.45rem;
+    }
+
+    /* =========================================
+       SECTION 27: WATCHLIST BTN (Hidden)
+       ========================================= */
+
+    .watchlist-toggle-btn {
+        display: flex !important;
+    }
+
+    .insights-btn {
+        display: none !important;
+    }
+
+    /* =========================================
+       SECTION 28: CAST & CHARACTERS
+       ========================================= */
+
+    .detail-view .detail-content:not(.actor-layout) .cast-characters-container {
+        display: block !important;
+        width: 100% !important;
+        margin-top: 1rem;
+    }
+
+    .detail-view .detail-content:not(.actor-layout) .cast-characters-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px;
+    }
+
+    .cast-characters-container h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* =========================================
+       SECTION 29: DETAIL SIDEBAR
+       ========================================= */
+
+    .detail-view .detail-content:not(.actor-layout) .detail-sidebar-column {
+        order: 4;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        width: 100% !important;
+        padding: 0;
+        margin-top: 1rem;
+    }
+
+    /* =========================================
+       SECTION 30-31: ANIME & GAME RELATIONS
+       ========================================= */
+
+    .anime-relations-container,
+    .game-relations-container {
+        flex-direction: column !important;
+        gap: 1.5rem;
+    }
+
+    .anime-sequel-container,
+    .anime-prequel-container,
+    .game-dlc-container,
+    .game-similar-container {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    /* =========================================
+       SECTION 32: TRAILER SECTION
+       ========================================= */
+
+    .detail-view .detail-content:not(.actor-layout) .detail-trailer-section {
+        order: 3;
+        width: 100% !important;
+        min-height: auto;
+        margin-top: 1rem !important;
+    }
+
+    .detail-view .detail-content:not(.actor-layout) .detail-trailer-section h3,
+    .detail-view .detail-content:not(.actor-layout) .detail-trailer-section .section-title {
+        display: none !important;
+    }
+
+    .trailer-container {
+        padding-bottom: 56.25%;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    /* =========================================
+       SECTION 33: RECOMMENDATIONS
+       ========================================= */
+
+    .detail-view .detail-content:not(.actor-layout) .detail-recommendations-section {
+        order: 6;
+        width: 100% !important;
+    }
+
+    .recommendations-container {
+        gap: 0.75rem;
+    }
+
+    .recommendation-item {
+        flex: 0 0 120px;
+        min-width: 120px;
+    }
+
+    .recommendation-poster {
+        width: 120px;
+        height: 180px;
+    }
+
+    .recommendation-title {
+        font-size: 0.75rem;
+        width: 120px;
+    }
+
+    /* =========================================
+       SECTION 34: REVIEWS
+       ========================================= */
+
+    .detail-view .detail-content:not(.actor-layout) .detail-reviews-section {
+        order: 7;
+        width: 100% !important;
+        max-height: 400px;
+    }
+
+    .review-item {
+        padding: 0.75rem 0;
+    }
+
+    .review-author {
+        font-size: 0.9rem;
+    }
+
+    .review-content {
+        font-size: 0.85rem;
+    }
+
+    /* =========================================
+       SECTION 35: INFORMATION SIDEBAR
+       ========================================= */
+
+    .detail-information-sidebar {
+        width: 100% !important;
+        max-height: none;
+        order: 5;
+    }
+
+    .info-row {
+        margin-bottom: 0.5rem;
+    }
+
+    .info-label {
+        font-size: 0.75rem;
+    }
+
+    .info-value {
+        font-size: 0.9rem;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* =========================================
+       SECTION 36-45: ACTOR VIEW
+       ========================================= */
+
+    .detail-view.actor-view .detail-content.actor-layout,
+    .detail-view[data-item-type="actors"] .detail-content.actor-layout,
+    .detail-view[data-type="actors"] .detail-content {
+        display: grid !important;
+        grid-template-columns: 40% 1fr !important;
+        grid-template-rows: auto auto 1fr auto;
+        gap: 0.05rem 1rem;
+        padding: 0 1rem;
+        margin-top: -80px !important;
+        align-items: start;
+    }
+
+    .detail-view.actor-view .detail-content.actor-layout .detail-poster-container,
+    .detail-view.actor-view .detail-content.actor-layout .actor-info,
+    .detail-view.actor-view .detail-content.actor-layout .actor-linked-movies,
+    .detail-view[data-type="actors"] .detail-poster-container,
+    .detail-view[data-type="actors"] .actor-info,
+    .detail-view[data-type="actors"] .actor-linked-movies {
+        display: contents !important;
+    }
+
+    .detail-content.actor-layout .detail-poster,
+    .detail-view[data-type="actors"] .detail-poster {
+        grid-column: 1;
+        grid-row: 1 / span 3;
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 2/3;
+        border-radius: 8px;
+        margin: 0 !important;
+        transform: translateX(-20px) !important;
+        object-fit: cover;
+    }
+
+    .detail-content.actor-layout .actor-social-media,
+    .detail-view[data-type="actors"] .actor-social-media {
+        grid-column: 1;
+        grid-row: 4;
+        display: flex !important;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: -1rem !important;
+        padding: 0;
+        position: static;
+        left: 0;
+        transform: translateX(-20px) !important;
+    }
+
+    .detail-content.actor-layout .actor-social-media a {
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .detail-content.actor-layout #actorTitle,
+    .detail-view[data-type="actors"] #actorTitle {
+        grid-column: 2;
+        grid-row: 1;
+        font-size: 1.1rem !important;
+        line-height: 1.2;
+        margin: 0;
+        padding: 0;
+        transform: translateX(-20px) !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 120% !important;
+    }
+
+    .detail-content.actor-layout #actorRoles,
+    .detail-view[data-type="actors"] #actorRoles {
+        grid-column: 2;
+        grid-row: 2;
+        font-size: 0.8rem;
+        margin: 0.25rem 0;
+        padding: 0;
+        transform: translateX(-20px) !important;
+    }
+
+    .detail-content.actor-layout #actorBiographyWrapper,
+    .detail-view[data-type="actors"] #actorBiographyWrapper {
+        grid-column: 2;
+        grid-row: 3 / span 2;
+        padding: 0;
+        margin: -12rem 0 0 0;
+        transform: translateX(-20px) !important;
+        width: 120% !important;
+    }
+
+    .biography-heading {
+        display: none !important;
+    }
+
+    .actor-biography {
+        font-size: 0.8rem !important;
+        line-height: 1.4;
+        -webkit-line-clamp: 6;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+    }
+
+    .read-more-btn {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .detail-content.actor-layout #knownForHeading,
+    .detail-content.actor-layout #linkedMoviesGrid,
+    .detail-content.actor-layout #actorInterviewsSection,
+    .detail-content.actor-layout #spotifyPlayerSection,
+    .detail-content.actor-layout .actor-linked-movies>h3 {
+        grid-column: 1 / -1;
+        width: 100%;
+        padding: 0;
+        margin-top: 1rem;
+        transform: none;
+    }
+
+    .detail-content.actor-layout .linked-movies-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px;
+        transform: none;
+    }
+
+    .detail-content.actor-layout .detail-info {
+        display: none !important;
+    }
+
+    /* =========================================
+       SECTION 46: SPOTIFY PLAYER
+       ========================================= */
+
+    #spotifyPlayerSection {
+        margin-top: 1rem;
+        background: transparent;
+        padding: 0;
+        transform: none;
+    }
+
+    #spotifyPlayerSection h3 {
+        display: none !important;
+    }
+
+    /* =========================================
+       SECTION 47-48: YOUTUBE INTERVIEWS
+       ========================================= */
+
+    .actor-interviews-section {
+        margin-top: 1rem;
+    }
+
+    .actor-interviews-section.regular-actor-interviews {
+        transform: none;
+    }
+
+    .actor-interviews-section h3 {
+        font-size: 1.1rem;
+    }
+
+    .interviews-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .interview-item {
+        border-radius: 6px;
+    }
+
+    .interview-title {
+        font-size: 0.8rem;
+    }
+
+    .interview-channel {
+        font-size: 0.7rem;
+    }
+
+    .youtube-video-modal-content {
+        width: 95%;
+        max-width: none;
+    }
+
+    /* =========================================
+       SECTION 49: HERO BANNER
+       ========================================= */
+
+    .hero-banner {
+        height: 220px !important;
+        width: calc(100% + 2rem) !important;
+        margin-left: -1rem !important;
+        margin-right: -1rem !important;
+        margin-top: -90px !important;
+        margin-bottom: 0 !important;
+    }
+
+    .detail-view .hero-banner {
+        height: 220px !important;
+        width: calc(100% + 2rem) !important;
+        margin-left: -1rem !important;
+        margin-right: -1rem !important;
+        margin-top: -90px !important;
+        margin-bottom: 0 !important;
+        mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+    }
+
+    .banner-image {
+        height: 100% !important;
+        object-fit: cover;
+    }
+
+    /* =========================================
+       SECTION 50: DETAIL CONTENT
+       ========================================= */
+
+    .detail-content {
+        margin-top: -100px;
+        position: relative;
+        z-index: 2;
+        gap: 1rem;
+    }
+
+    .detail-content:not(.actor-layout) {
+        margin-top: -100px;
+    }
+
+    /* =========================================
+       SECTION 51: SEQUELS VIEW
+       ========================================= */
+
+    .sequels-view {
+        padding: 1rem;
+    }
+
+    .sequels-banner-container {
+        height: 200px;
+    }
+
+    .sequels-view.has-banner .sequels-header {
+        margin-top: 220px;
+    }
+
+    .sequels-header h2 {
+        font-size: 1.3rem;
+    }
+
+    /* =========================================
+       SECTION 52: COLLECTION VIEW
+       ========================================= */
+
+    .collection-view {
+        padding: 1rem;
+    }
+
+    .collection-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .collection-name-input {
+        min-width: 100px;
+        max-width: 150px;
+    }
+
+    /* =========================================
+       SECTION 53: SEARCH VIEW
+       ========================================= */
+
+    .search-view {
+        padding: 1rem;
+    }
+
+    .search-view-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .search-filters-sidebar {
+        width: 100%;
+        min-width: 0;
+        position: static;
+        max-height: none;
+        padding: 1rem;
+    }
+
+    .search-filters-title {
+        font-size: 1.2rem;
+    }
+
+    .search-view .grid-container {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .search-view .grid-item {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        transform: none;
+    }
+
+    .search-view .grid-item:nth-child(n) {
+        grid-column: auto !important;
+    }
+
+    .search-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .search-section-title {
+        font-size: 1.1rem;
+    }
+
+    /* =========================================
+       SECTION 54-55: INSIGHTS VIEW
+       ========================================= */
+
+    .insights-view {
+        padding: 1rem 0;
+    }
+
+    .insights-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .insights-stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .insights-stat-value {
+        font-size: 1.4rem;
+    }
+
+    .insights-rank-bars {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    /* =========================================
+       SECTION 56: MODALS
+       ========================================= */
+
+    .modal-content {
+        width: 95%;
+        max-width: none;
+        max-height: 90vh;
+        margin: 10px;
+        z-index: 99 !important;
+    }
+
+    .modal-header {
+        padding: 0.75rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .modal-tabs {
+        padding: 0 0.5rem;
+    }
+
+    .modal-tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .modal-form {
+        padding: 0.75rem;
+    }
+
+    .form-group {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-group label {
+        font-size: 0.75rem;
+    }
+
+    .form-actions {
+        flex-direction: row;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 0.5rem;
+    }
+
+    /* =========================================
+       SECTION 57: SETTINGS
+       ========================================= */
+
+    .settings-content {
+        padding: 0.75rem;
+    }
+
+    .setting-group {
+        flex-wrap: wrap;
+    }
+
+    .setting-group label {
+        min-width: 100%;
+        margin-bottom: 0.25rem;
+    }
+
+    /* =========================================
+       SECTION 58-60: API & SEARCH
+       ========================================= */
+
+    .api-results {
+        max-height: 300px;
+    }
+
+    .api-result-item {
+        padding: 0.5rem;
+        gap: 0.75rem;
+    }
+
+    .api-result-item img {
+        width: 60px;
+        height: 90px;
+    }
+
+    .api-result-item h4 {
+        font-size: 1rem;
+    }
+
+    /* =========================================
+       SECTION 62: HOME VIEW
+       ========================================= */
+
+    .home-view {
+        padding: 1rem 0;
+    }
+
+    .home-section {
+        margin-bottom: 2rem;
+    }
+
+    .home-section-title {
+        font-size: 1.3rem;
+    }
+
+    .home-row {
+        margin-bottom: 1.5rem;
+    }
+
+    .home-row-header {
+        transform: none;
+    }
+
+    .home-row-title {
+        font-size: 0.9rem;
+    }
+
+    .home-row-content {
+        min-height: 200px;
+    }
+
+    .home-row-scroll {
+        gap: 0.5rem;
+    }
+
+    /* =========================================
+       SECTION 63: HOME ITEM CARDS
+       ========================================= */
+
+    .home-item-card {
+        flex: 0 0 140px;
+        min-width: 140px;
+        max-width: 140px;
+    }
+
+    .home-item-poster {
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+        transform: none;
+    }
+
+    .home-item-card-game {
+        flex: 0 0 260px;
+        min-width: 260px;
+        max-width: 260px;
+    }
+
+    .home-item-card-game .home-item-poster {
+        width: 260px;
+        min-width: 260px;
+        max-width: 260px;
+    }
+
+    .home-item-info {
+        max-width: 140px;
+    }
+
+    .home-item-title {
+        font-size: 0.8rem;
+    }
+
+    .home-item-subtitle {
+        font-size: 0.75rem;
+    }
+
+    /* =========================================
+       SECTION 64-68: CATEGORY SHORTCUTS
+       ========================================= */
+
+
+    .category-shortcuts-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .category-shortcuts-card {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .category-box {
+        flex: 0 0 calc(50% - 4px);
+        aspect-ratio: 3/2;
+        margin: 0;
+    }
+
+    .category-name {
+        font-size: 0.85rem;
+    }
+
+    .category-preview-box {
+        width: 100vw;
+        margin-left: -1rem;
+        margin-right: -1rem;
+        border-radius: 0;
+        aspect-ratio: 16/9;
+    }
+
+    .category-preview-name {
+        font-size: 2.5rem;
+        transform: translate(15px, -15px);
+    }
+
+    .category-preview-overlay {
+        padding: 1rem;
+    }
+
+    /* =========================================
+       SECTION 69-70: TRAILER CAROUSEL
+       ========================================= */
+
+    .trailer-carousel-container {
+        height: 280px;
+        margin-bottom: 2rem;
+    }
+
+    .trailer-card-3d {
+        width: 90%;
+        height: auto;
+        aspect-ratio: 16/9;
+    }
+
+    .trailer-info-overlay {
+        bottom: -50px;
+    }
+
+    .trailer-title-3d {
+        font-size: 0.9rem;
+    }
+
+    .carousel-nav-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+        margin: 0 -10px;
+    }
+
+    .trailer-modal-content {
+        width: 98%;
+        max-width: none;
+    }
+
+    /* =========================================
+       SECTION 71: SCROLL TOP BUTTON
+       ========================================= */
+
+    .scroll-top-btn {
+        bottom: 90px !important;
+        right: 16px !important;
+        z-index: 900 !important;
+        width: 40px;
+        height: 40px;
+    }
+
+
+
+    body.modal-open .scroll-top-btn {
+        display: none !important;
+    }
+
+    /* Hide scroll-to-top button when add menu is open */
+    .add-menu[style*="display: block"]~.scroll-top-btn,
+    .add-menu[style*="display: flex"]~.scroll-top-btn {
+        display: none !important;
+    }
+
+    .overlay.active~.scroll-top-btn {
+        display: none !important;
+
+    }
+
+    .home-view:not([style*="display: none"])~.scroll-top-btn,
+    .detail-view:not([style*="display: none"])~.scroll-top-btn,
+    .search-view:not([style*="display: none"])~.scroll-top-btn,
+    .settings-view:not([style*="display: none"])~.scroll-top-btn,
+    .insights-view:not([style*="display: none"])~.scroll-top-btn {
+        display: none !important;
+    }
+
+    /* =========================================
+       SECTION 72: LIBRARY VIEW
+       ========================================= */
+
+    .library-view {
+        width: 100%;
+        padding: 0;
+    }
+
+    /* =========================================
+       SECTION 73-75: MISC
+       ========================================= */
+
+    .image-selection-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    .controls-row.hidden {
+        display: none !important;
+    }
+
+    .tabs-row.hidden {
+        display: none !important;
+    }
+
+    .context-menu-item {
+        padding: 0.75rem 1rem;
+    }
+
+    /* =========================================
+       SECTION 76: HOME TAB - HIDE NAVIGATION BUTTONS
+       ========================================= */
+
+    /* Hide all carousel/scroll navigation arrows in home tab */
+    .home-view .carousel-nav-btn,
+    .home-view .carousel-prev,
+    .home-view .carousel-next,
+    .home-view .home-scroll-btn,
+    .home-view .home-scroll-left,
+    .home-view .home-scroll-right,
+    .home-row-scroll-controls {
+        display: none !important;
+    }
+
+}
