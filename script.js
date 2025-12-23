@@ -1,7 +1,7 @@
 // script.js
 const API_URL = window.location.origin.startsWith("http")
     ? window.location.origin
-    : "http://localhost:3000"; // connect to your local DuckDB server
+    : "http://localhost:3000"; // connect to your local GitHub server
 const SHOW_COLLECTIONS_STORAGE_KEY = 'mediaTrackerShowCollections';
 
 const LAYOUT_STORAGE_KEY = 'mediaTrackerLayouts';
@@ -66,7 +66,7 @@ class MediaTracker {
         // Watchlist toggle state
         this.showWatchlistInLibrary = false;
 
-        // In-memory model (synced from DuckDB)
+        // In-memory model (synced from GitHub)
         this.data = {
             items: [],
             settings: {
@@ -148,7 +148,7 @@ class MediaTracker {
         await this.loadItemsFromDB();
         await this.loadSettingsFromDB();
 
-        // Load collections from DuckDB
+        // Load collections from GitHub
         await this.loadCollectionsFromDB();
 
         // 2) Apply settings to CSS vars
@@ -1020,7 +1020,7 @@ class MediaTracker {
             const res = await apiFetch(`${API_URL}/collections`);
             if (!res.ok) throw new Error(await res.text());
             this.collections = await res.json();
-            console.log("✅ Loaded collections from DuckDB:", this.collections.length);
+            console.log("✅ Loaded collections from GitHub:", this.collections.length);
         } catch (err) {
             console.error("❌ Error loading collections from DB:", err);
             this.collections = [];
@@ -1037,7 +1037,7 @@ class MediaTracker {
                     body: JSON.stringify(collection)
                 });
             }
-            console.log("✅ Saved collections to DuckDB");
+            console.log("✅ Saved collections to GitHub");
         } catch (err) {
             console.error("❌ Error saving collections to DB:", err);
         }
@@ -1050,7 +1050,7 @@ class MediaTracker {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(collection)
             });
-            console.log("✅ Saved collection to DuckDB:", collection.name);
+            console.log("✅ Saved collection to GitHub:", collection.name);
         } catch (err) {
             console.error("❌ Error saving collection to DB:", err);
         }
@@ -1063,7 +1063,7 @@ class MediaTracker {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
             });
-            console.log("✅ Updated collection in DuckDB:", collectionId);
+            console.log("✅ Updated collection in GitHub:", collectionId);
         } catch (err) {
             console.error("❌ Error updating collection in DB:", err);
         }
@@ -1074,7 +1074,7 @@ class MediaTracker {
             await apiFetch(`${API_URL}/collections/${collectionId}`, {
                 method: "DELETE"
             });
-            console.log("✅ Deleted collection from DuckDB:", collectionId);
+            console.log("✅ Deleted collection from GitHub:", collectionId);
         } catch (err) {
             console.error("❌ Error deleting collection from DB:", err);
         }
@@ -1175,7 +1175,7 @@ class MediaTracker {
                 body: JSON.stringify(this.data.settings),
                 credentials: 'include'
             });
-            console.log("✅ Settings saved to DuckDB");
+            console.log("✅ Settings saved to GitHub");
         } catch (err) {
             console.error("❌ Error saving settings to DB:", err);
         }
@@ -1299,7 +1299,7 @@ class MediaTracker {
                     if (previewImg) previewImg.src = url;
                 }
 
-                // Save to DuckDB
+                // Save to GitHub
                 await this.saveCategoryImage(cat, url);
 
                 // Clear inputs
@@ -1323,7 +1323,7 @@ class MediaTracker {
                     if (previewImg) previewImg.src = '';
                 }
 
-                // Save empty to DuckDB
+                // Save empty to GitHub
                 await this.saveCategoryImage(cat, '');
 
                 // Clear inputs and preview
@@ -1737,7 +1737,7 @@ class MediaTracker {
             actors: 'People'
         };
 
-        // Load saved images from DuckDB
+        // Load saved images from GitHub
         await this.loadCategoryImages();
 
         // Initialize preview with first category (anime)
@@ -1775,7 +1775,7 @@ class MediaTracker {
                             const smallImg = document.getElementById(`img-${category}`);
                             if (smallImg) smallImg.src = base64;
 
-                            // Save to DuckDB
+                            // Save to GitHub
                             await this.saveCategoryImage(category, base64);
                         };
                         reader.readAsDataURL(file);
@@ -1816,7 +1816,7 @@ class MediaTracker {
                                 if (previewImg) previewImg.src = base64;
                             }
 
-                            // Save to DuckDB
+                            // Save to GitHub
                             await this.saveCategoryImage(category, base64);
                         };
                         reader.readAsDataURL(file);
@@ -1849,7 +1849,7 @@ class MediaTracker {
                 console.warn(`Failed to load category images: ${response.status} ${response.statusText}`);
             }
         } catch (err) {
-            console.error('Failed to load category images from DuckDB:', err);
+            console.error('Failed to load category images from GitHub:', err);
         }
     }
 
@@ -1865,9 +1865,9 @@ class MediaTracker {
                 throw new Error('Failed to save category image');
             }
 
-            console.log(`Category image for ${category} saved to DuckDB`);
+            console.log(`Category image for ${category} saved to GitHub`);
         } catch (err) {
-            console.error('Failed to save category image to DuckDB:', err);
+            console.error('Failed to save category image to GitHub:', err);
             alert('Failed to save category image. Please try again.');
         }
     }
@@ -5531,7 +5531,7 @@ class MediaTracker {
         // Add to collections
         this.collections.push(collection);
 
-        // Save to DuckDB
+        // Save to GitHub
         await this.saveCollectionToDB(collection);
 
         // Select the newly created collection
@@ -5786,7 +5786,7 @@ class MediaTracker {
                 collection.itemIds.push(item.id);
                 console.log(`Auto-added "${item.name}" to collection "${collection.name}" (match score: ${bestMatch.score}, word score: ${bestMatch.wordScore})`);
 
-                // Save collections to DuckDB
+                // Save collections to GitHub
                 await this.saveCollectionToDB(collection);
             }
         }
@@ -5809,7 +5809,7 @@ class MediaTracker {
             // Update existing collection
             this.currentEditingCollection.itemIds = Array.from(this.currentCollectionItems);
 
-            // Save to DuckDB
+            // Save to GitHub
             await this.saveCollectionToDB(this.currentEditingCollection);
 
             // Show success message and go back to collection view
@@ -5834,7 +5834,7 @@ class MediaTracker {
         // Add to collections
         this.collections.push(collection);
 
-        // Save to DuckDB
+        // Save to GitHub
         await this.saveCollectionToDB(collection);
 
         // Show success message and go back
@@ -11604,7 +11604,7 @@ class MediaTracker {
     toggleCollectionsInLibrary() {
         this.showCollectionsInLibrary = !this.showCollectionsInLibrary;
         try {
-            // Collections toggle state managed in DuckDB only
+            // Collections toggle state managed in GitHub only
         } catch (storageError) {
             console.warn('Failed to persist collections toggle preference:', storageError);
         }
@@ -11615,7 +11615,7 @@ class MediaTracker {
     toggleWatchlistView() {
         this.showWatchlistInLibrary = !this.showWatchlistInLibrary;
         try {
-            // Watchlist toggle state managed in DuckDB only
+            // Watchlist toggle state managed in GitHub only
         } catch (storageError) {
             console.warn('Failed to persist watchlist toggle preference:', storageError);
         }
@@ -11939,14 +11939,14 @@ class MediaTracker {
                 console.error('Save failed:', errorText);
                 alert('Save failed: ' + errorText);
             }
-            console.log("✅ Saved to DuckDB:", dbItem);
+            console.log("✅ Saved to GitHub:", dbItem);
             console.log("✅ Saved Studio/Developer/DirectorCreator to DB:", {
                 studio: dbItem.studio,
                 developer: dbItem.developer,
                 directorCreator: dbItem.directorCreator
             });
         } catch (err) {
-            console.error("❌ Error saving to DuckDB:", err);
+            console.error("❌ Error saving to GitHub:", err);
         }
 
         // Reload from DB (source of truth), but DO NOT wipe UI if empty
@@ -11998,7 +11998,7 @@ class MediaTracker {
                     } else {
                         console.log(`ℹ️ Item ${savedItemId} already in collection "${collectionToAddTo.name}"`);
                     }
-                    // Save collections to DuckDB
+                    // Save collections to GitHub
                     await this.saveCollectionToDB(collectionToAddTo);
                     console.log(`✅ Saved collection "${collectionToAddTo.name}" to database`);
                 } else {
@@ -12287,7 +12287,7 @@ class MediaTracker {
                 console.warn("DB returned empty; keeping current UI items.");
             }
 
-            console.log("📦 Loaded items from DuckDB:", mapped);
+            console.log("📦 Loaded items from GitHub:", mapped);
             // Debug: Check if Studio/Developer/DirectorCreator are being loaded
             if (mapped.length > 0) {
                 const sampleItem = mapped.find(i => i.type === 'tv' || i.type === 'movies') || mapped[0];
@@ -12447,9 +12447,9 @@ class MediaTracker {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ ids: selectedItemIds })
                 });
-                console.log("🗑️ Deleted items from DuckDB:", selectedItemIds);
+                console.log("🗑️ Deleted items from GitHub:", selectedItemIds);
             } catch (err) {
-                console.error("❌ Error deleting items from DuckDB:", err);
+                console.error("❌ Error deleting items from GitHub:", err);
             }
         }
 
@@ -12461,9 +12461,9 @@ class MediaTracker {
             for (const collectionId of selectedCollectionIds) {
                 try {
                     await this.deleteCollectionFromDB(collectionId);
-                    console.log("🗑️ Deleted collection from DuckDB:", collectionId);
+                    console.log("🗑️ Deleted collection from GitHub:", collectionId);
                 } catch (err) {
-                    console.error("❌ Error deleting collection from DuckDB:", err);
+                    console.error("❌ Error deleting collection from GitHub:", err);
                 }
             }
         }
@@ -15420,7 +15420,7 @@ class MediaTracker {
                 this.collections[idx] = collection;
             }
 
-            // Save to DuckDB (server converts base64 to file path)
+            // Save to GitHub (server converts base64 to file path)
             await this.updateCollectionInDB(collection.id, { posterBase64: base64 });
 
             // Reload collections to get updated paths
@@ -15652,7 +15652,7 @@ class MediaTracker {
                 this.collections[idx] = collection;
             }
 
-            // Save to DuckDB (server converts base64 to file path)
+            // Save to GitHub (server converts base64 to file path)
             await this.updateCollectionInDB(collection.id, { posterBase64: base64 });
 
             // Reload collections to get updated paths
@@ -16059,7 +16059,7 @@ class MediaTracker {
                 throw new Error('Invalid image data received');
             }
 
-            // Save to DuckDB (server converts base64 to file path)
+            // Save to GitHub (server converts base64 to file path)
             const response = await apiFetch(`${API_URL}/collections/${collection.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -16122,7 +16122,7 @@ class MediaTracker {
                 this.collections[idx] = collection;
             }
 
-            // Save to DuckDB
+            // Save to GitHub
             await this.updateCollectionInDB(collection.id, { bannerBase64: base64 });
 
             // If we're currently viewing this collection, refresh the view
