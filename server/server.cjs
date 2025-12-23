@@ -106,9 +106,8 @@ function getDataRepoConfig() {
 // This allows us to keep the 26+ callback-based endpoints working without
 // extensive refactoring.
 
-// Forward declaration for settingsCache (defined later)
-let _settingsCache = null;
-let _settingsCacheTime = 0;
+// Note: settingsCache and settingsCacheTime are defined later near getSettingsRow()
+// The mock db object calls getSettingsRow() which uses those cache variables
 
 const db = {
   // Handle db.all() calls - the main query method used by endpoints
@@ -129,8 +128,6 @@ const db = {
           if (typeof getSettingsRow === 'function') {
             const settings = await getSettingsRow();
             callback(null, [settings]);
-          } else if (_settingsCache) {
-            callback(null, [_settingsCache]);
           } else {
             callback(null, [{}]);
           }
@@ -593,6 +590,10 @@ app.post('/settings', async (req, res) => {
     );
 
     githubConfigSha.settings = result.sha;
+
+    // Invalidate settings cache so next request gets fresh data
+    invalidateSettingsCache();
+
     log("✅ Settings saved to GitHub");
 
     res.json({ ok: true });
