@@ -3841,23 +3841,38 @@ app.get("/api/poster", async (req, res) => {
       return res.status(400).send('Missing url parameter');
     }
 
-    const protocol = imageUrl.startsWith('https://') ? https : http;
+    const parsedUrl = new URL(imageUrl);
+    const protocol = parsedUrl.protocol === 'https:' ? https : http;
 
-    protocol.get(imageUrl, (imageRes) => {
+    const options = {
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        'Referer': parsedUrl.origin
+      }
+    };
+
+    protocol.get(options, (imageRes) => {
       if (imageRes.statusCode === 200) {
         res.setHeader('Content-Type', imageRes.headers['content-type'] || 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=31536000');
         res.setHeader('Access-Control-Allow-Origin', '*');
         imageRes.pipe(res);
+      } else if (imageRes.statusCode >= 300 && imageRes.statusCode < 400 && imageRes.headers.location) {
+        // Handle redirects
+        res.redirect(imageRes.headers.location);
       } else {
+        console.warn(`Poster proxy: Remote returned ${imageRes.statusCode} for ${imageUrl}`);
         res.status(404).send('Image not found');
       }
     }).on('error', (err) => {
-      console.error('Error proxying poster:', err);
+      console.error('Error proxying poster:', err.message);
       res.status(500).send('Error loading image');
     });
   } catch (error) {
-    console.error('Poster proxy error:', error);
+    console.error('Poster proxy error:', error.message);
     res.status(500).send('Invalid image URL');
   }
 });
