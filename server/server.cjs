@@ -911,19 +911,16 @@ app.post("/add", async (req, res) => {
           );
           posterPath = imgResult.downloadUrl;
           posterImageRepo = selectedRepo;
-          log(`✅ Uploaded poster to ${selectedRepo}`);
+          log(`✅ Uploaded poster to ${selectedRepo}: ${posterPath}`);
         } else {
-          // Fallback to local storage
-          posterPath = `assets/img/${id}_poster.webp`;
-          fs.writeFileSync(path.join(IMG_DIR, `${id}_poster.webp`),
-            Buffer.from(posterBase64.split(",")[1], "base64"));
+          // No available repo - log error but don't use local storage (doesn't persist on Render)
+          console.error("❌ No GitHub image repo available for poster upload. Image will not be saved!");
+          // Keep posterPath as-is (empty or from previous save)
         }
       } catch (imgError) {
-        console.warn("⚠️ Error uploading poster to GitHub:", imgError.message);
-        // Fallback to local storage
-        posterPath = `assets/img/${id}_poster.webp`;
-        fs.writeFileSync(path.join(IMG_DIR, `${id}_poster.webp`),
-          Buffer.from(posterBase64.split(",")[1], "base64"));
+        console.error("❌ Error uploading poster to GitHub:", imgError.message);
+        // Don't fall back to local storage - it doesn't persist on Render
+        // Keep posterPath as-is (empty or from previous save)
       }
     }
 
@@ -948,17 +945,14 @@ app.post("/add", async (req, res) => {
           );
           bannerPath = imgResult.downloadUrl;
           bannerImageRepo = selectedRepo;
-          log(`✅ Uploaded banner to ${selectedRepo}`);
+          log(`✅ Uploaded banner to ${selectedRepo}: ${bannerPath}`);
         } else {
-          bannerPath = `assets/img/${id}_banner.webp`;
-          fs.writeFileSync(path.join(IMG_DIR, `${id}_banner.webp`),
-            Buffer.from(bannerBase64.split(",")[1], "base64"));
+          // No available repo - log error but don't use local storage
+          console.error("❌ No GitHub image repo available for banner upload. Image will not be saved!");
         }
       } catch (imgError) {
-        console.warn("⚠️ Error uploading banner to GitHub:", imgError.message);
-        bannerPath = `assets/img/${id}_banner.webp`;
-        fs.writeFileSync(path.join(IMG_DIR, `${id}_banner.webp`),
-          Buffer.from(bannerBase64.split(",")[1], "base64"));
+        console.error("❌ Error uploading banner to GitHub:", imgError.message);
+        // Don't fall back to local storage - it doesn't persist on Render
       }
     }
 
