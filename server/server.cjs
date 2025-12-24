@@ -889,47 +889,18 @@ app.post("/add", async (req, res) => {
       // Item doesn't exist yet
     }
 
-    // Handle poster image upload to GitHub
+    // Handle poster and banner image uploads to GitHub
     let posterPath = it.posterPath || currentItem?.posterPath || "";
     let posterImageRepo = currentItem?.posterImageRepo || null;
-
-    if (posterBase64?.startsWith("data:image")) {
-      try {
-        // Select image repository
-        const selectedRepo = await githubStorage.selectImageRepo(
-          { owner: ghConfig.owner, token: ghConfig.token },
-          ghConfig.imageRepos
-        );
-
-        if (selectedRepo) {
-          const imgConfig = { owner: ghConfig.owner, repo: selectedRepo, token: ghConfig.token };
-          const imgResult = await githubStorage.uploadImage(
-            imgConfig,
-            `${id}_poster.webp`,
-            posterBase64,
-            `Upload poster for ${id}`
-          );
-          posterPath = imgResult.downloadUrl;
-          posterImageRepo = selectedRepo;
-          log(`✅ Uploaded poster to ${selectedRepo}: ${posterPath}`);
-        } else {
-          // No available repo - log error but don't use local storage (doesn't persist on Render)
-          console.error("❌ No GitHub image repo available for poster upload. Image will not be saved!");
-          // Keep posterPath as-is (empty or from previous save)
-        }
-      } catch (imgError) {
-        console.error("❌ Error uploading poster to GitHub:", imgError.message);
-        // Don't fall back to local storage - it doesn't persist on Render
-        // Keep posterPath as-is (empty or from previous save)
-      }
-    }
-
-    // Handle banner image upload to GitHub
     let bannerPath = it.bannerPath || currentItem?.bannerPath || "";
     let bannerImageRepo = currentItem?.bannerImageRepo || null;
 
-    if (bannerBase64?.startsWith("data:image")) {
+    const needsPosterUpload = posterBase64?.startsWith("data:image");
+    const needsBannerUpload = bannerBase64?.startsWith("data:image");
+
+    if (needsPosterUpload || needsBannerUpload) {
       try {
+        // Select image repository ONCE for both uploads
         const selectedRepo = await githubStorage.selectImageRepo(
           { owner: ghConfig.owner, token: ghConfig.token },
           ghConfig.imageRepos
@@ -937,22 +908,44 @@ app.post("/add", async (req, res) => {
 
         if (selectedRepo) {
           const imgConfig = { owner: ghConfig.owner, repo: selectedRepo, token: ghConfig.token };
-          const imgResult = await githubStorage.uploadImage(
-            imgConfig,
-            `${id}_banner.webp`,
-            bannerBase64,
-            `Upload banner for ${id}`
-          );
-          bannerPath = imgResult.downloadUrl;
-          bannerImageRepo = selectedRepo;
-          log(`✅ Uploaded banner to ${selectedRepo}: ${bannerPath}`);
+
+          // Upload both images in parallel
+          const uploadPromises = [];
+
+          if (needsPosterUpload) {
+            uploadPromises.push(
+              githubStorage.uploadImage(imgConfig, `${id}_poster.webp`, posterBase64, `Upload poster for ${id}`)
+                .then(result => {
+                  posterPath = result.downloadUrl;
+                  posterImageRepo = selectedRepo;
+                  log(`✅ Uploaded poster to ${selectedRepo}: ${posterPath}`);
+                })
+                .catch(err => {
+                  console.error("❌ Error uploading poster to GitHub:", err.message);
+                })
+            );
+          }
+
+          if (needsBannerUpload) {
+            uploadPromises.push(
+              githubStorage.uploadImage(imgConfig, `${id}_banner.webp`, bannerBase64, `Upload banner for ${id}`)
+                .then(result => {
+                  bannerPath = result.downloadUrl;
+                  bannerImageRepo = selectedRepo;
+                  log(`✅ Uploaded banner to ${selectedRepo}: ${bannerPath}`);
+                })
+                .catch(err => {
+                  console.error("❌ Error uploading banner to GitHub:", err.message);
+                })
+            );
+          }
+
+          await Promise.all(uploadPromises);
         } else {
-          // No available repo - log error but don't use local storage
-          console.error("❌ No GitHub image repo available for banner upload. Image will not be saved!");
+          console.error("❌ No GitHub image repo available. Images will not be saved!");
         }
       } catch (imgError) {
-        console.error("❌ Error uploading banner to GitHub:", imgError.message);
-        // Don't fall back to local storage - it doesn't persist on Render
+        console.error("❌ Error during image upload:", imgError.message);
       }
     }
 
@@ -1085,38 +1078,68 @@ app.post("/delete", async (req, res) => {
     const config = getDataRepoConfig();
     const ghConfig = getGitHubConfig();
 
-    // Delete each item and its images
-    for (const id of ids) {
+    // Helper to extract repo from GitHub URL
+    const extractRepoFromUrl = (url) => {
+      if (!url || !url.includes('raw.githubusercontent.com')) return null;
+      const match = url.match(/raw\.githubusercontent\.com\/[^\/]+\/([^\/]+)/);
+      return match ? match[1] : null;
+    };
+
+    // Helper to delete image from a specific repo
+    const deleteImageFromRepo = async (repo, filename) => {
+      try {
+        const imgConfig = { owner: ghConfig.owner, repo, token: ghConfig.token };
+        const file = await githubStorage.getFileContent(imgConfig, filename);
+        if (file) {
+          await githubStorage.deleteFile(imgConfig, filename, file.sha, `Delete ${filename}`);
+          return true;
+        }
+      } catch (e) {
+        // File might not exist in this repo
+      }
+      return false;
+    };
+
+    // Helper to delete image (try specified repo first, then search all repos)
+    const deleteImage = async (id, type, specifiedRepo, urlPath) => {
+      const filename = `${id}_${type}.webp`;
+
+      // Try to extract repo from URL if available
+      let repoFromUrl = extractRepoFromUrl(urlPath);
+
+      // Try specified repo first
+      if (specifiedRepo) {
+        if (await deleteImageFromRepo(specifiedRepo, filename)) return true;
+      }
+
+      // Try repo from URL
+      if (repoFromUrl && repoFromUrl !== specifiedRepo) {
+        if (await deleteImageFromRepo(repoFromUrl, filename)) return true;
+      }
+
+      // Search all image repos as fallback
+      for (const repo of ghConfig.imageRepos) {
+        if (repo !== specifiedRepo && repo !== repoFromUrl) {
+          if (await deleteImageFromRepo(repo, filename)) return true;
+        }
+      }
+
+      return false;
+    };
+
+    // Delete all items in parallel
+    const deletePromises = ids.map(async (id) => {
       try {
         // Get item to find image repos
         const itemResult = await githubStorage.getFileContent(config, `media/${id}.json`);
         if (itemResult) {
           const item = itemResult.content;
 
-          // Delete images from GitHub repos if they exist
-          if (item.posterImageRepo && item.posterPath) {
-            try {
-              const imgConfig = { owner: ghConfig.owner, repo: item.posterImageRepo, token: ghConfig.token };
-              const posterFile = await githubStorage.getFileContent(imgConfig, `${id}_poster.webp`);
-              if (posterFile) {
-                await githubStorage.deleteFile(imgConfig, `${id}_poster.webp`, posterFile.sha, `Delete poster for ${id}`);
-              }
-            } catch (e) {
-              console.warn(`Could not delete poster for ${id}:`, e.message);
-            }
-          }
-
-          if (item.bannerImageRepo && item.bannerPath) {
-            try {
-              const imgConfig = { owner: ghConfig.owner, repo: item.bannerImageRepo, token: ghConfig.token };
-              const bannerFile = await githubStorage.getFileContent(imgConfig, `${id}_banner.webp`);
-              if (bannerFile) {
-                await githubStorage.deleteFile(imgConfig, `${id}_banner.webp`, bannerFile.sha, `Delete banner for ${id}`);
-              }
-            } catch (e) {
-              console.warn(`Could not delete banner for ${id}:`, e.message);
-            }
-          }
+          // Delete poster and banner in parallel
+          await Promise.all([
+            deleteImage(id, 'poster', item.posterImageRepo, item.posterPath),
+            deleteImage(id, 'banner', item.bannerImageRepo, item.bannerPath)
+          ]);
 
           // Delete item JSON
           await githubStorage.deleteFile(config, `media/${id}.json`, itemResult.sha, `Delete ${id}`);
@@ -1132,9 +1155,11 @@ app.post("/delete", async (req, res) => {
         if (fs.existsSync(posterPath)) fs.unlinkSync(posterPath);
         if (fs.existsSync(bannerPath)) fs.unlinkSync(bannerPath);
       } catch (e) {
-        console.warn(`Could not delete local images for ${id}:`, e.message);
+        // Ignore local delete errors
       }
-    }
+    });
+
+    await Promise.all(deletePromises);
 
     // Update index
     try {

@@ -18,7 +18,7 @@ const GITHUB_API_BASE = "api.github.com";
 function githubRequest(method, path, options = {}) {
   return new Promise((resolve, reject) => {
     const { token, body } = options;
-    
+
     if (!token) {
       return reject(new Error("GitHub token is required"));
     }
@@ -73,28 +73,28 @@ function githubRequest(method, path, options = {}) {
 async function getFileContent(config, filePath) {
   const { owner, repo, token } = config;
   const path = `/repos/${owner}/${repo}/contents/${filePath}`;
-  
+
   try {
     const response = await githubRequest("GET", path, { token });
-    
+
     if (response.statusCode === 404) {
       return null; // File doesn't exist
     }
-    
+
     if (response.statusCode !== 200) {
       console.error(`GitHub API error (${response.statusCode}):`, response.data);
       throw new Error(`GitHub API error: ${response.statusCode}`);
     }
-    
+
     const { content, sha } = response.data;
-    
+
     if (!content) {
       return { content: null, sha };
     }
-    
+
     // Decode base64 content
     const decoded = Buffer.from(content, "base64").toString("utf-8");
-    
+
     // Try to parse as JSON
     try {
       return { content: JSON.parse(decoded), sha };
@@ -120,31 +120,31 @@ async function getFileContent(config, filePath) {
 async function createOrUpdateFile(config, filePath, content, message, sha = null) {
   const { owner, repo, token } = config;
   const path = `/repos/${owner}/${repo}/contents/${filePath}`;
-  
+
   // Convert content to string if needed
   const contentStr = typeof content === "string" ? content : JSON.stringify(content, null, 2);
-  
+
   // Encode content as base64
   const contentBase64 = Buffer.from(contentStr).toString("base64");
-  
+
   const body = {
     message: message || `Update ${filePath}`,
     content: contentBase64
   };
-  
+
   // If SHA provided, this is an update
   if (sha) {
     body.sha = sha;
   }
-  
+
   try {
     const response = await githubRequest("PUT", path, { token, body });
-    
+
     if (response.statusCode !== 200 && response.statusCode !== 201) {
       console.error(`GitHub API error (${response.statusCode}):`, response.data);
       throw new Error(`GitHub API error: ${response.statusCode} - ${response.data.message || "Unknown error"}`);
     }
-    
+
     return {
       sha: response.data.content?.sha,
       commit: response.data.commit
@@ -166,20 +166,20 @@ async function createOrUpdateFile(config, filePath, content, message, sha = null
 async function deleteFile(config, filePath, sha, message) {
   const { owner, repo, token } = config;
   const path = `/repos/${owner}/${repo}/contents/${filePath}`;
-  
+
   const body = {
     message: message || `Delete ${filePath}`,
     sha: sha
   };
-  
+
   try {
     const response = await githubRequest("DELETE", path, { token, body });
-    
+
     if (response.statusCode !== 200) {
       console.error(`GitHub API error (${response.statusCode}):`, response.data);
       throw new Error(`GitHub API error: ${response.statusCode}`);
     }
-    
+
     return true;
   } catch (error) {
     console.error(`Error deleting file ${filePath}:`, error.message);
@@ -195,15 +195,15 @@ async function deleteFile(config, filePath, sha, message) {
 async function getRepoSize(config) {
   const { owner, repo, token } = config;
   const path = `/repos/${owner}/${repo}`;
-  
+
   try {
     const response = await githubRequest("GET", path, { token });
-    
+
     if (response.statusCode !== 200) {
       console.error(`GitHub API error (${response.statusCode}):`, response.data);
       throw new Error(`GitHub API error: ${response.statusCode}`);
     }
-    
+
     // GitHub returns size in KB
     return (response.data.size || 0) * 1024;
   } catch (error) {
@@ -212,9 +212,14 @@ async function getRepoSize(config) {
   }
 }
 
+// Cache for selected image repo (5 minute TTL)
+let selectedRepoCache = { repo: null, timestamp: 0 };
+const REPO_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Select the appropriate image repository based on size limits
  * Repos should be under 900MB to leave buffer room
+ * Uses caching to avoid checking sizes on every upload
  * @param {object} config - { owner, token }
  * @param {string[]} imageRepos - List of image repository names
  * @returns {Promise<string|null>} - Selected repository name or null if all full
@@ -222,13 +227,22 @@ async function getRepoSize(config) {
 async function selectImageRepo(config, imageRepos) {
   const { owner, token } = config;
   const MAX_SIZE = 900 * 1024 * 1024; // 900MB in bytes
-  
+
+  // Check cache first
+  const now = Date.now();
+  if (selectedRepoCache.repo && (now - selectedRepoCache.timestamp) < REPO_CACHE_TTL) {
+    console.log(`Using cached image repo: ${selectedRepoCache.repo}`);
+    return selectedRepoCache.repo;
+  }
+
   for (const repo of imageRepos) {
     try {
       const size = await getRepoSize({ owner, repo, token });
       console.log(`Image repo ${repo} size: ${(size / 1024 / 1024).toFixed(2)}MB`);
-      
+
       if (size < MAX_SIZE) {
+        // Cache the result
+        selectedRepoCache = { repo, timestamp: now };
         return repo;
       }
     } catch (error) {
@@ -237,7 +251,7 @@ async function selectImageRepo(config, imageRepos) {
       continue;
     }
   }
-  
+
   // All repos are full or unavailable
   console.error("All image repositories are full or unavailable!");
   return null;
@@ -255,7 +269,7 @@ async function selectImageRepo(config, imageRepos) {
 async function uploadImage(config, filePath, imageData, message, sha = null) {
   const { owner, repo, token } = config;
   const path = `/repos/${owner}/${repo}/contents/${filePath}`;
-  
+
   // Convert to base64 if it's a Buffer
   let contentBase64;
   if (Buffer.isBuffer(imageData)) {
@@ -271,27 +285,27 @@ async function uploadImage(config, filePath, imageData, message, sha = null) {
   } else {
     throw new Error("Invalid image data type");
   }
-  
+
   const body = {
     message: message || `Upload ${filePath}`,
     content: contentBase64
   };
-  
+
   if (sha) {
     body.sha = sha;
   }
-  
+
   try {
     const response = await githubRequest("PUT", path, { token, body });
-    
+
     if (response.statusCode !== 200 && response.statusCode !== 201) {
       console.error(`GitHub API error (${response.statusCode}):`, response.data);
       throw new Error(`GitHub API error: ${response.statusCode}`);
     }
-    
+
     // Construct raw download URL
     const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${filePath}`;
-    
+
     return {
       sha: response.data.content?.sha,
       downloadUrl
@@ -311,24 +325,24 @@ async function uploadImage(config, filePath, imageData, message, sha = null) {
 async function listDirectory(config, dirPath) {
   const { owner, repo, token } = config;
   const path = `/repos/${owner}/${repo}/contents/${dirPath}`;
-  
+
   try {
     const response = await githubRequest("GET", path, { token });
-    
+
     if (response.statusCode === 404) {
       return []; // Directory doesn't exist
     }
-    
+
     if (response.statusCode !== 200) {
       console.error(`GitHub API error (${response.statusCode}):`, response.data);
       throw new Error(`GitHub API error: ${response.statusCode}`);
     }
-    
+
     // Ensure we have an array response (directory listing)
     if (!Array.isArray(response.data)) {
       return []; // Might be a file, not a directory
     }
-    
+
     return response.data.map(item => ({
       name: item.name,
       path: item.path,
@@ -349,7 +363,7 @@ async function listDirectory(config, dirPath) {
 async function repoExists(config) {
   const { owner, repo, token } = config;
   const path = `/repos/${owner}/${repo}`;
-  
+
   try {
     const response = await githubRequest("GET", path, { token });
     return response.statusCode === 200;
@@ -366,36 +380,36 @@ async function repoExists(config) {
  */
 async function initializeDataRepo(config) {
   const { owner, repo, token } = config;
-  
+
   try {
     // Check if repo exists
     if (!await repoExists(config)) {
       console.error(`Repository ${owner}/${repo} does not exist or is not accessible`);
       return false;
     }
-    
+
     // Check if already initialized by looking for settings.json
     const settings = await getFileContent(config, "settings.json");
     if (settings) {
       console.log("Repository already initialized");
       return true;
     }
-    
+
     // Create initial structure
     console.log("Initializing repository structure...");
-    
+
     // Create empty settings.json
     await createOrUpdateFile(config, "settings.json", {}, "Initialize settings");
-    
+
     // Create media index
     await createOrUpdateFile(config, "media/index.json", [], "Initialize media index");
-    
+
     // Create collections index
     await createOrUpdateFile(config, "collections/index.json", [], "Initialize collections index");
-    
+
     // Create empty category images
     await createOrUpdateFile(config, "category-images.json", {}, "Initialize category images");
-    
+
     console.log("Repository structure initialized successfully");
     return true;
   } catch (error) {
