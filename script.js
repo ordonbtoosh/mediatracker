@@ -15339,6 +15339,24 @@ class MediaTracker {
             // Reload items from DB to ensure consistency
             await this.loadItemsFromDB();
 
+            // Update currentItem to point to the reloaded item
+            const reloadedItem = this.data.items.find(i => i.id === item.id);
+            if (reloadedItem) {
+                this.currentItem = reloadedItem;
+                // Update the displayed image to the new one from DB
+                if (this.currentImageType === 'poster') {
+                    const posterEl = document.getElementById('detailPoster');
+                    if (posterEl && reloadedItem.posterBase64) {
+                        posterEl.src = this.getProxiedImageUrl(reloadedItem.posterBase64);
+                    }
+                } else {
+                    const bannerEl = document.getElementById('bannerImage');
+                    if (bannerEl && reloadedItem.bannerBase64) {
+                        bannerEl.src = this.getProxiedImageUrl(reloadedItem.bannerBase64);
+                    }
+                }
+            }
+
             this.closeImageSelector();
         } catch (error) {
             console.error('Error loading image:', error);
@@ -15440,6 +15458,24 @@ class MediaTracker {
 
             // Reload items from DB to ensure consistency
             await this.loadItemsFromDB();
+
+            // Update currentItem to point to the reloaded item
+            const reloadedItem = this.data.items.find(i => i.id === item.id);
+            if (reloadedItem) {
+                this.currentItem = reloadedItem;
+                // Update the displayed image to the new one from DB
+                if (imageType === 'poster') {
+                    const posterEl = document.getElementById('detailPoster');
+                    if (posterEl && reloadedItem.posterBase64) {
+                        posterEl.src = this.getProxiedImageUrl(reloadedItem.posterBase64);
+                    }
+                } else {
+                    const bannerEl = document.getElementById('bannerImage');
+                    if (bannerEl && reloadedItem.bannerBase64) {
+                        bannerEl.src = this.getProxiedImageUrl(reloadedItem.bannerBase64);
+                    }
+                }
+            }
 
             // Clear the file input
             event.target.value = '';
