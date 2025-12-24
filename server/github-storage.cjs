@@ -259,16 +259,17 @@ async function selectImageRepo(config, imageRepos) {
 
 /**
  * Upload an image (binary file) to a GitHub repository
+ * Automatically handles updates by fetching the existing file's SHA
  * @param {object} config - { owner, repo, token }
  * @param {string} filePath - Path for the image file
  * @param {Buffer|string} imageData - Image data (Buffer or base64 string)
  * @param {string} message - Commit message
- * @param {string|null} sha - SHA of existing file (for updates)
+ * @param {string|null} sha - SHA of existing file (for updates) - optional, will be auto-fetched if not provided
  * @returns {Promise<{sha: string, downloadUrl: string}>}
  */
 async function uploadImage(config, filePath, imageData, message, sha = null) {
   const { owner, repo, token } = config;
-  const path = `/repos/${owner}/${repo}/contents/${filePath}`;
+  const apiPath = `/repos/${owner}/${repo}/contents/${filePath}`;
 
   // Convert to base64 if it's a Buffer
   let contentBase64;
@@ -286,17 +287,31 @@ async function uploadImage(config, filePath, imageData, message, sha = null) {
     throw new Error("Invalid image data type");
   }
 
+  // If SHA not provided, check if file exists and get its SHA
+  let existingSha = sha;
+  if (!existingSha) {
+    try {
+      const existingFile = await githubRequest("GET", apiPath, { token });
+      if (existingFile.statusCode === 200 && existingFile.data.sha) {
+        existingSha = existingFile.data.sha;
+        console.log(`📝 Found existing file ${filePath}, SHA: ${existingSha.substring(0, 8)}...`);
+      }
+    } catch (e) {
+      // File doesn't exist, that's fine - we'll create it
+    }
+  }
+
   const body = {
     message: message || `Upload ${filePath}`,
     content: contentBase64
   };
 
-  if (sha) {
-    body.sha = sha;
+  if (existingSha) {
+    body.sha = existingSha;
   }
 
   try {
-    const response = await githubRequest("PUT", path, { token, body });
+    const response = await githubRequest("PUT", apiPath, { token, body });
 
     if (response.statusCode !== 200 && response.statusCode !== 201) {
       console.error(`GitHub API error (${response.statusCode}):`, response.data);
@@ -305,6 +320,8 @@ async function uploadImage(config, filePath, imageData, message, sha = null) {
 
     // Construct raw download URL
     const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${filePath}`;
+
+    console.log(`✅ Image uploaded successfully: ${downloadUrl}`);
 
     return {
       sha: response.data.content?.sha,
