@@ -98,6 +98,245 @@ class MediaTracker {
         };
     }
 
+    // Handle image selection when invoked from the Add New Item form.
+    // Tries to call the existing `openImageSelector` if available (to reuse the image modal).
+    // If not present or if the modal flow isn't desired, falls back to a simple prompt
+    // where the user can paste a full image URL or a TMDB path (e.g. `/abc.jpg`).
+    async handleAddFormImageSelect(type, source) {
+        try {
+            if (typeof this.openImageSelector === 'function') {
+                // If the existing image selector supports being opened, prefer it.
+                // Note: older implementations may not accept a target context; we call it
+                // anyway to keep existing behavior where possible.
+                try {
+                    this.openImageSelector(type, source);
+                    return;
+                } catch (e) {
+                    // swallow and continue to fallback
+                    console.warn('openImageSelector failed, falling back to prompt', e);
+                }
+            }
+
+            // Fallback: ask the user for an image URL or TMDB path
+            const hint = source === 'tmdb' ? "Enter full image URL or TMDB path (e.g. /kqjL...jpg)" : "Enter full image URL";
+            const input = window.prompt(hint, '');
+            if (!input) return;
+
+            let url = input.trim();
+            if (url.startsWith('/')) {
+                // Treat as TMDB path -> build proxied TMDB image URL
+                const tmdbFull = `https://image.tmdb.org/t/p/w500${url}`;
+                url = `${API_URL}/api/tmdb-image?url=${encodeURIComponent(tmdbFull)}`;
+            }
+
+            // For Steam or other sources, accept full URLs as-is
+            this.setFormImagePreview(type, url);
+        } catch (err) {
+            console.error('Error in handleAddFormImageSelect:', err);
+        }
+    }
+
+    // Sets the preview image in the Add New Item form for `poster` or `banner`.
+    setFormImagePreview(type, url) {
+        try {
+            const previewId = type === 'poster' ? 'posterPreview' : 'bannerPreview';
+            const previewEl = document.getElementById(previewId);
+            if (!previewEl) return;
+
+            previewEl.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = type;
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '160px';
+            img.loading = 'lazy';
+            previewEl.appendChild(img);
+        } catch (e) {
+            console.error('setFormImagePreview error', e);
+        }
+    }
+
+    // Open the shared image selector modal and populate with results for the given source.
+    async openImageSelector(type = 'poster', source = 'tmdb') {
+        try {
+            const modal = document.getElementById('imageSelectModal');
+            const titleEl = document.getElementById('imageSelectTitle');
+            const grid = document.getElementById('imageSelectionGrid');
+            const animeSearchContainer = document.getElementById('animeSearchContainer');
+            const animeSearchInput = document.getElementById('animeSearchInput');
+
+            if (!modal || !grid || !titleEl) return;
+
+            // Determine target context: if currently in detail view, target detail item, else assume add-form
+            const target = (this.currentView === 'detail') ? 'detail' : 'add-form';
+            this._imageSelectorContext = { target, type, source };
+
+            titleEl.textContent = `Select ${type === 'poster' ? 'Poster' : 'Banner'} (${source.toUpperCase()})`;
+            grid.innerHTML = '';
+
+            // Show anime search field only when category is anime
+            if (animeSearchContainer) animeSearchContainer.style.display = (this.currentTab === 'anime') ? 'block' : 'none';
+            if (animeSearchInput) animeSearchInput.value = '';
+
+            // Open modal
+            modal.style.display = 'block';
+
+            // Determine a sensible query: prefer form name/title, fallback to prompt
+            let query = '';
+            if (target === 'add-form') {
+                query = (document.getElementById('itemName')?.value || '').trim();
+            } else {
+                query = (this.currentItem?.title || this.currentItem?.name || '').trim();
+            }
+            if (!query) {
+                query = window.prompt('Search query for images (title):', '') || '';
+            }
+
+            if (!query) {
+                // No query -> show manual URL entry helper
+                const info = document.createElement('div');
+                info.className = 'image-selector-info';
+                info.textContent = 'No search query provided. Paste an image URL below or cancel.';
+                const urlInput = document.createElement('input');
+                urlInput.type = 'text';
+                urlInput.placeholder = 'https://example.com/image.jpg';
+                urlInput.style.width = '100%';
+                urlInput.style.marginTop = '0.5rem';
+                const applyBtn = document.createElement('button');
+                applyBtn.textContent = 'Apply URL';
+                applyBtn.className = 'small-btn';
+                applyBtn.addEventListener('click', () => {
+                    const url = urlInput.value.trim();
+                    if (url) this.applySelectedImage(url);
+                });
+                grid.appendChild(info);
+                grid.appendChild(urlInput);
+                grid.appendChild(applyBtn);
+                return;
+            }
+
+            // Perform TMDB search via server proxy for reasonable categories
+            let category = 'movie';
+            if (this.currentTab === 'tv' || (this.currentView === 'detail' && this.currentItem?.type === 'tv')) category = 'tv';
+            if (this.currentTab === 'anime' || (this.currentView === 'detail' && this.currentItem?.type === 'anime')) category = 'movie';
+            if (this.currentTab === 'games' || (this.currentView === 'detail' && this.currentItem?.type === 'games')) category = 'games';
+
+            // Use existing universal search helper and fall back to a simple TMDB search by title
+            let results = [];
+            try {
+                if (source === 'tmdb') {
+                    // Search both movie and tv for broader matches
+                    const movieResults = await this.searchAPIForUniversal(query, 'movies', 'tmdb').catch(() => []);
+                    const tvResults = await this.searchAPIForUniversal(query, 'tv', 'tmdb').catch(() => []);
+                    results = [...(movieResults || []), ...(tvResults || [])].slice(0, 40);
+                } else {
+                    // Other sources: try games search
+                    results = await this.searchAPIForUniversal(query, (category === 'games') ? 'games' : 'movies', source).catch(() => []);
+                }
+            } catch (e) {
+                console.warn('Image selector search failed', e);
+            }
+
+            if (!results || !results.length) {
+                const noRes = document.createElement('div');
+                noRes.textContent = 'No images found for that query.';
+                grid.appendChild(noRes);
+                return;
+            }
+
+            // Create image tiles
+            results.forEach(result => {
+                // Determine poster/backdrop candidates
+                const posterCandidates = [
+                    result.poster_path,
+                    result.profile_path,
+                    result.poster,
+                    result.header_image,
+                    result.main_picture?.large,
+                    result.main_picture?.medium,
+                    result.backdrop_path
+                ];
+
+                const posterRaw = posterCandidates.find(p => p && p !== '');
+                let imgSrc = '';
+                if (posterRaw) {
+                    if (typeof posterRaw === 'string' && posterRaw.startsWith('http')) {
+                        imgSrc = posterRaw;
+                    } else {
+                        const tmdbPath = String(posterRaw).startsWith('/') ? posterRaw : `/${posterRaw}`;
+                        imgSrc = `${API_URL}/api/tmdb-image?url=${encodeURIComponent(`https://image.tmdb.org/t/p/w500${tmdbPath}`)}`;
+                    }
+                }
+
+                if (!imgSrc) return;
+
+                const tile = document.createElement('div');
+                tile.className = 'image-tile';
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.alt = result.title || result.name || '';
+                img.loading = 'lazy';
+                img.style.width = '100%';
+                img.style.cursor = 'pointer';
+                img.addEventListener('click', () => this.applySelectedImage(imgSrc));
+                tile.appendChild(img);
+                grid.appendChild(tile);
+            });
+        } catch (err) {
+            console.error('openImageSelector error', err);
+        }
+    }
+
+    // Apply the selected image URL to the appropriate target (add-form or detail)
+    applySelectedImage(url) {
+        try {
+            const ctx = this._imageSelectorContext || { target: 'add-form', type: 'poster' };
+            if (ctx.target === 'add-form') {
+                this.setFormImagePreview(ctx.type, url);
+            } else if (ctx.target === 'detail') {
+                // For detail view, attempt to set the detail poster/banner upload preview
+                if (ctx.type === 'poster') {
+                    const detailPoster = document.getElementById('detailPoster');
+                    if (detailPoster) detailPoster.src = url;
+                } else {
+                    const bannerImageEl = document.getElementById('bannerImage');
+                    if (bannerImageEl) bannerImageEl.src = url;
+                }
+            }
+            this.closeImageSelector();
+        } catch (e) {
+            console.error('applySelectedImage error', e);
+        }
+    }
+
+    closeImageSelector() {
+        try {
+            const modal = document.getElementById('imageSelectModal');
+            const grid = document.getElementById('imageSelectionGrid');
+            if (modal) modal.style.display = 'none';
+            if (grid) grid.innerHTML = '';
+            this._imageSelectorContext = null;
+        } catch (e) {
+            console.error('closeImageSelector error', e);
+        }
+    }
+
+    switchImageTab(tab) {
+        try {
+            const posterTab = document.getElementById('posterTab');
+            const bannerTab = document.getElementById('bannerTab');
+            if (posterTab && bannerTab) {
+                posterTab.classList.toggle('active', tab === 'poster');
+                bannerTab.classList.toggle('active', tab === 'banner');
+            }
+            // Update context
+            if (!this._imageSelectorContext) this._imageSelectorContext = { target: 'add-form', type: tab, source: 'tmdb' };
+            else this._imageSelectorContext.type = tab;
+        } catch (e) {
+            console.error('switchImageTab error', e);
+        }
+    }
+
     mapGenreIdsToNames(genreIds) {
         if (!genreIds || !Array.isArray(genreIds)) return '';
         return genreIds.map(id => this.tmdbGenres[id] || '').filter(name => name).join(', ');
@@ -1653,11 +1892,24 @@ class MediaTracker {
         document.getElementById('bannerTab').addEventListener('click', () => this.switchImageTab('banner'));
         document.getElementById('animeSearchInput').addEventListener('input', () => this.handleAnimeImageSearch());
 
-        // Add-form TMDB image select buttons
-        const selectPosterBtn = document.getElementById('selectPosterFromTMDB');
-        if (selectPosterBtn) selectPosterBtn.addEventListener('click', () => this.openImageSelector('poster', 'tmdb'));
-        const selectBannerBtn = document.getElementById('selectBannerFromTMDB');
-        if (selectBannerBtn) selectBannerBtn.addEventListener('click', () => this.openImageSelector('banner', 'tmdb'));
+        // Add-form image select buttons - use safe wrapper so add-form can pick images even if
+        // the detail image selector isn't available. Prompts for an image URL/path as fallback.
+        document.getElementById('selectPosterFromTMDB')?.addEventListener('click', () => this.handleAddFormImageSelect('poster', 'tmdb'));
+        document.getElementById('selectBannerFromTMDB')?.addEventListener('click', () => this.handleAddFormImageSelect('banner', 'tmdb'));
+        document.getElementById('selectPosterFromSteam')?.addEventListener('click', () => this.handleAddFormImageSelect('poster', 'rawg'));
+        document.getElementById('selectBannerFromSteam')?.addEventListener('click', () => this.handleAddFormImageSelect('banner', 'rawg'));
+
+        // Add-form upload buttons - trigger the visible file inputs in the add form
+        document.getElementById('uploadPosterBtnAdd')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('itemPoster');
+            if (input) input.click();
+        });
+        document.getElementById('uploadBannerBtnAdd')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('itemBanner');
+            if (input) input.click();
+        });
 
         // Stars
         this.setupStarRatings();
@@ -6068,23 +6320,6 @@ class MediaTracker {
 
         this.currentView = 'detail';
         this.currentItem = item;
-
-        // Reset visible elements to prevent flashing old content
-        const detailBannerEl = document.getElementById('bannerImage');
-        if (detailBannerEl) {
-            detailBannerEl.removeAttribute('src');
-            // Also clear the background directly if it was used as fallback
-            detailBannerEl.style.backgroundImage = 'none';
-        }
-
-        const detailPosterEl = document.getElementById('detailPoster');
-        if (detailPosterEl) detailPosterEl.removeAttribute('src');
-
-        const detailTitleEl = document.getElementById('detailTitle');
-        if (detailTitleEl) detailTitleEl.textContent = '';
-
-        const detailDescEl = document.getElementById('detailDescription');
-        if (detailDescEl) detailDescEl.textContent = '';
 
         // Hide all views, show detail view
         const homeView = document.getElementById('homeView');
@@ -14744,28 +14979,39 @@ class MediaTracker {
                 // preserve dataset source if present
                 if (formApiEl?.dataset?.source) item.source = formApiEl.dataset.source;
             } else if (formName) {
-                // Try to resolve a TMDB id by name for the current tab
+                // Try to resolve ID by name based on source
                 try {
-                    const foundId = await this.searchTMDBByName(formName, this.currentTab);
+                    let foundId = null;
+                    let foundSource = source; // Default to requested source
+
+                    if (source === 'steam') {
+                        foundId = await this.searchSteamByName(formName);
+                    } else {
+                        // Default logic (TMDB)
+                        foundId = await this.searchTMDBByName(formName, this.currentTab);
+                        foundSource = 'tmdb';
+                    }
+
                     if (foundId) {
-                        // set form field so future operations use the TMDB id
+                        // set form field so future operations use the ID
                         if (formApiEl) {
                             formApiEl.value = foundId;
-                            formApiEl.dataset.source = 'tmdb';
+                            formApiEl.dataset.source = foundSource;
                         }
-                        item = { type: this.currentTab, externalApiId: foundId, name: formName, source: 'tmdb' };
+                        item = { type: this.currentTab, externalApiId: foundId, name: formName, source: foundSource };
                     } else {
-                        // No TMDB id found by name
+                        // No ID found by name
                         const modal = document.getElementById('imageSelectModal');
                         modal.classList.add('show');
-                        document.getElementById('imageSelectionGrid').innerHTML = '<p>No TMDB ID found for this name. Please enter a valid name or upload an image.</p>';
+                        const providerName = source === 'steam' ? 'Steam' : 'TMDB';
+                        document.getElementById('imageSelectionGrid').innerHTML = `<p>No ${providerName} ID found for this name. Please enter a valid name or upload an image.</p>`;
                         return;
                     }
                 } catch (err) {
-                    console.warn('TMDB name search failed while opening image selector:', err && err.message ? err.message : err);
+                    console.warn(`Name search failed (${source}) while opening image selector:`, err && err.message ? err.message : err);
                     const modal = document.getElementById('imageSelectModal');
                     modal.classList.add('show');
-                    document.getElementById('imageSelectionGrid').innerHTML = '<p>Error searching TMDB by name. Check your TMDB API key.</p>';
+                    document.getElementById('imageSelectionGrid').innerHTML = '<p>Error searching for images. Check your API keys.</p>';
                     return;
                 }
             } else {
@@ -14808,7 +15054,7 @@ class MediaTracker {
             await this.fetchTMDBImages(item);
         } else if (item.type === 'anime') {
             await this.fetchAnimeImagesFromSearch(item, item.name);
-        } else if (item.type === 'games') {
+        } else if (item.type === 'games' || source === 'steam') {
             await this.fetchSteamImages(item);
         } else if (item.type === 'actors') {
             await this.fetchActorImages(item);
@@ -14839,6 +15085,24 @@ class MediaTracker {
         } catch (error) {
             console.error('Error fetching TMDB images:', error);
             document.getElementById('imageSelectionGrid').innerHTML = '<p style="color: #ff6666;">Error loading images. Make sure TMDB API key is configured.</p>';
+        }
+    }
+
+    // Helper function to search Steam by name and get ID
+    async searchSteamByName(name) {
+        if (!name) return null;
+        try {
+            const url = `${API_URL}/api/steam/search?term=${encodeURIComponent(name)}`;
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+                return data.items[0].id;
+            }
+            return null;
+        } catch (e) {
+            console.error('Error searching Steam:', e);
+            return null;
         }
     }
 

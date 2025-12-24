@@ -761,6 +761,21 @@ body.tab-home .controls-row {
     padding: 1rem;
 }
 
+/* Ensure image action buttons inside the Add New Item menu are visible and high-contrast */
+.add-menu .detail-menu-option,
+.add-menu .small-btn {
+    display: inline-block !important;
+    color: var(--title-color) !important;
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.04);
+    padding: 0.35rem 0.6rem;
+    border-radius: 4px;
+}
+
+.add-menu .detail-menu-option--primary {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)) !important;
+}
+
 .add-menu .api-search-content {
     padding: 1rem;
 }
@@ -785,10 +800,10 @@ body.tab-home .controls-row {
     width: 100%;
 }
 
-/* Hide TMDB select buttons inside the Add menu (only affects add form modal) */
+/* Allow TMDB select buttons inside the Add menu (show for add-form image selection) */
 .add-menu #selectPosterFromTMDB,
 .add-menu #selectBannerFromTMDB {
-    display: none !important;
+    display: inline-block;
 }
 
 .add-option,

@@ -1375,8 +1375,8 @@ app.get('/api/github-image', async (req, res) => {
           res.setHeader('Content-Type', proxyRes.headers['content-type']);
         }
 
-        // Add cache headers for better performance (5 minutes)
-        res.setHeader('Cache-Control', 'public, max-age=300');
+        // Add cache headers for better performance
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
 
         // Pipe data
         proxyRes.pipe(res);
@@ -3529,6 +3529,43 @@ app.get("/api/steam/appdetails", async (req, res) => {
     });
   } catch (e) {
     console.error("/api/steam/appdetails error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ===============================
+// 🔍 Steam Store Search endpoint
+// ===============================
+app.get("/api/steam/search", async (req, res) => {
+  try {
+    const { term } = req.query;
+    if (!term) {
+      return res.status(400).json({ error: "Missing term parameter" });
+    }
+
+    console.log(`🔍 Searching Steam for: ${term}`);
+    const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=en&cc=US`;
+
+    makeRequest(url)
+      .then(response => {
+        if (response.statusCode !== 200) {
+          return res.status(response.statusCode).json({ error: `Steam API returned status ${response.statusCode}` });
+        }
+
+        try {
+          const data = JSON.parse(response.data);
+          res.json(data);
+        } catch (parseError) {
+          console.error("Steam search response is not valid JSON:", parseError);
+          res.status(500).json({ error: "Invalid JSON response from Steam API" });
+        }
+      })
+      .catch(error => {
+        console.error("Steam search request error:", error);
+        res.status(500).json({ error: error.message });
+      });
+  } catch (e) {
+    console.error("/api/steam/search error:", e.message);
     res.status(500).json({ error: e.message });
   }
 });

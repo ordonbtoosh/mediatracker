@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meta Rank</title>
-    <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="/home-minimal.css">
-    <link rel="stylesheet" href="/mobile.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="home-minimal.css">
+    <link rel="stylesheet" href="mobile.css">
     <script>
         // Apply saved theme immediately to prevent flash
         (function () {
@@ -362,20 +362,32 @@
                                 <div class="form-group">
                                     <label for="itemPoster">Poster Image</label>
                                     <input type="file" id="itemPoster" accept="image/*" />
-                                    <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+                                    <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
                                         <button type="button"
                                             class="small-btn detail-menu-option detail-menu-option--inline detail-menu-option--primary"
-                                            id="selectPosterFromTMDB">Select Poster (TMDB)</button>
+                                            id="selectPosterFromTMDB">Change Poster (TMDB)</button>
+                                        <button type="button"
+                                            class="small-btn detail-menu-option detail-menu-option--inline detail-menu-option--primary"
+                                            id="selectPosterFromSteam">Change Poster (Steam)</button>
+                                        <button type="button"
+                                            class="small-btn detail-menu-option detail-menu-option--inline"
+                                            id="uploadPosterBtnAdd">Upload Poster</button>
                                     </div>
                                     <div class="image-preview" id="posterPreview"></div>
                                 </div>
                                 <div class="form-group">
                                     <label for="itemBanner">Banner Image</label>
                                     <input type="file" id="itemBanner" accept="image/*" />
-                                    <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+                                    <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
                                         <button type="button"
                                             class="small-btn detail-menu-option detail-menu-option--inline"
-                                            id="selectBannerFromTMDB">Select Banner (TMDB)</button>
+                                            id="selectBannerFromTMDB">Change Banner (TMDB)</button>
+                                        <button type="button"
+                                            class="small-btn detail-menu-option detail-menu-option--inline"
+                                            id="selectBannerFromSteam">Change Banner (Steam)</button>
+                                        <button type="button"
+                                            class="small-btn detail-menu-option detail-menu-option--inline"
+                                            id="uploadBannerBtnAdd">Upload Banner</button>
                                     </div>
                                     <div class="image-preview" id="bannerPreview"></div>
                                 </div>
