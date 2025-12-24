@@ -180,15 +180,29 @@ async function getJsonData(publicId) {
     }
 
     try {
-        // Get the raw file URL with cache-busting timestamp
-        const timestamp = Date.now();
-        const baseUrl = cloudinary.url(publicId, {
-            resource_type: 'raw',
-            secure: true
-        });
+        // First, get the resource info to get the version number
+        // This bypasses CDN caching by using the Admin API
+        let resourceInfo;
+        try {
+            resourceInfo = await cloudinary.api.resource(publicId, {
+                resource_type: 'raw'
+            });
+        } catch (apiErr) {
+            if (apiErr.error && apiErr.error.http_code === 404) {
+                console.log(`[Cloudinary] JSON not found: ${publicId}`);
+                return null;
+            }
+            throw apiErr;
+        }
 
-        // Add cache-busting query parameter
-        const url = `${baseUrl}?t=${timestamp}`;
+        if (!resourceInfo || !resourceInfo.secure_url) {
+            console.log(`[Cloudinary] JSON not found: ${publicId}`);
+            return null;
+        }
+
+        // Use the secure_url which includes the version
+        const url = resourceInfo.secure_url;
+        console.log(`[Cloudinary] Fetching JSON from: ${url}`);
 
         // Fetch the content
         const https = require('https');
