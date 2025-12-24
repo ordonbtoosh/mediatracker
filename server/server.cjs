@@ -1311,13 +1311,7 @@ app.get('/api/github-image', async (req, res) => {
 
     const config = getDataRepoConfig();
 
-    // Fetch image using the GitHub token
-    const response = await githubRequest('GET', imageUrl.replace('https://api.github.com', ''), {
-      token: config.token
-    });
-
-    // If it's a raw URL request, we might need a different approach if githubRequest expects API paths
-    // But for raw.githubusercontent.com, we can just use standard https request with auth header
+    // Handle raw.githubusercontent.com URLs - use standard HTTPS with auth
     if (imageUrl.includes('raw.githubusercontent.com')) {
       const https = require('https');
       const options = {
@@ -1329,6 +1323,7 @@ app.get('/api/github-image', async (req, res) => {
 
       https.get(imageUrl, options, (proxyRes) => {
         if (proxyRes.statusCode !== 200) {
+          console.error(`GitHub image proxy failed: ${proxyRes.statusCode} for ${imageUrl}`);
           return res.status(proxyRes.statusCode).send('Failed to fetch image');
         }
 
@@ -1336,6 +1331,9 @@ app.get('/api/github-image', async (req, res) => {
         if (proxyRes.headers['content-type']) {
           res.setHeader('Content-Type', proxyRes.headers['content-type']);
         }
+
+        // Add cache headers for better performance
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
 
         // Pipe data
         proxyRes.pipe(res);
@@ -1346,7 +1344,7 @@ app.get('/api/github-image', async (req, res) => {
       return;
     }
 
-    // Fallback for API URLs if needed (not expected for current use case)
+    // Fallback for other GitHub URLs (not expected for current use case)
     res.status(400).send("Only raw GitHub URLs supported currently");
 
   } catch (e) {
