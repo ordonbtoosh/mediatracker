@@ -1297,6 +1297,71 @@ app.patch("/actor-linked-movies", async (req, res) => {
 
 
 // ===============================
+// 🖼️ GitHub Image Proxy
+// ===============================
+app.get('/api/github-image', async (req, res) => {
+  try {
+    const imageUrl = req.query.url;
+    if (!imageUrl) {
+      return res.status(400).send('Missing url parameter');
+    }
+
+    // Security check: only allow GitHub URLs
+    if (!imageUrl.includes('githubusercontent.com') && !imageUrl.includes('github.com')) {
+      return res.status(403).send('Invalid domain');
+    }
+
+    if (!isGitHubConfigured()) {
+      return res.status(500).send("GitHub storage not configured");
+    }
+
+    const config = getDataRepoConfig();
+
+    // Fetch image using the GitHub token
+    const response = await githubRequest('GET', imageUrl.replace('https://api.github.com', ''), {
+      token: config.token
+    });
+
+    // If it's a raw URL request, we might need a different approach if githubRequest expects API paths
+    // But for raw.githubusercontent.com, we can just use standard https request with auth header
+    if (imageUrl.includes('raw.githubusercontent.com')) {
+      const https = require('https');
+      const options = {
+        headers: {
+          'Authorization': `Bearer ${config.token}`,
+          'User-Agent': 'MediaTracker-App'
+        }
+      };
+
+      https.get(imageUrl, options, (proxyRes) => {
+        if (proxyRes.statusCode !== 200) {
+          return res.status(proxyRes.statusCode).send('Failed to fetch image');
+        }
+
+        // Forward content type
+        if (proxyRes.headers['content-type']) {
+          res.setHeader('Content-Type', proxyRes.headers['content-type']);
+        }
+
+        // Pipe data
+        proxyRes.pipe(res);
+      }).on('error', (e) => {
+        console.error("Proxy request failed:", e);
+        res.status(500).send("Proxy request failed");
+      });
+      return;
+    }
+
+    // Fallback for API URLs if needed (not expected for current use case)
+    res.status(400).send("Only raw GitHub URLs supported currently");
+
+  } catch (e) {
+    console.error("❌ /api/github-image error:", e.message);
+    res.status(500).send(e.message);
+  }
+});
+
+// ===============================
 // 🔐 Spotify proxy (server-side)
 // ===============================
 async function getServerSpotifyToken() {
@@ -5106,61 +5171,85 @@ app.get("/api/discover", async (req, res) => {
 
 // Get all category images
 app.get("/category-images", async (req, res) => {
+  log("🖼️ GET /category-images called");
   try {
     if (!isGitHubConfigured()) {
+      log("⚠️ GitHub not configured, returning empty array");
       return res.json([]);
     }
 
     const config = getDataRepoConfig();
+    log("🔍 Fetching category-images.json from GitHub...");
     const result = await githubStorage.getFileContent(config, "category-images.json");
 
     if (!result || !result.content) {
+      log("📭 No category images found");
       return res.json([]);
     }
 
     // Convert from object to array format for compatibility
     const catImages = result.content;
-    const rows = Object.entries(catImages).map(([category, image]) => ({ category, image }));
+    const rows = Object.entries(catImages).map(([category, image]) => ({
+      category,
+      image: image.substring(0, 50) + "..." // Log truncated preview
+    }));
+    log(`✅ Found ${rows.length} category images:`, rows.map(r => r.category));
 
-    res.json(rows);
+    // Return full images, not truncated
+    const fullRows = Object.entries(catImages).map(([category, image]) => ({ category, image }));
+    res.json(fullRows);
   } catch (error) {
     console.error("❌ /category-images GET error:", error.message);
+    console.error("❌ /category-images GET error stack:", error.stack);
     res.json([]);
   }
 });
 
 // Save/update category image
 app.post("/category-images", async (req, res) => {
+  log("🖼️ POST /category-images called");
   try {
     if (!isGitHubConfigured()) {
+      log("⚠️ GitHub not configured, cannot save");
       return res.status(500).send("GitHub storage not configured");
     }
 
     const { category, image } = req.body || {};
+    log(`📝 Category: ${category}, Image size: ${image ? image.length : 0} chars`);
+
     if (!category || !image) {
+      log("❌ Missing category or image");
       return res.status(400).send("Missing category or image");
     }
 
     const config = getDataRepoConfig();
+    log("📂 Using data repo config:", { owner: config.owner, repo: config.repo });
 
     // Get current category images
     let catImages = {};
     let currentSha = null;
     try {
+      log("🔍 Getting existing category-images.json...");
       const result = await githubStorage.getFileContent(config, "category-images.json");
       if (result) {
         catImages = result.content || {};
         currentSha = result.sha;
+        log(`✅ Found existing file with ${Object.keys(catImages).length} categories, SHA: ${currentSha}`);
+      } else {
+        log("📭 No existing file found, will create new");
       }
     } catch (e) {
+      log(`⚠️ Error getting file (might not exist): ${e.message}`);
       // File doesn't exist yet
     }
 
     // Update the category
     catImages[category] = image;
+    log(`📝 Updated category '${category}', now have ${Object.keys(catImages).length} categories`);
 
     // Save to GitHub
-    await githubStorage.createOrUpdateFile(
+    log("💾 Saving to GitHub...");
+    const saveResult = await githubStorage.createOrUpdateFile(
       config,
       "category-images.json",
       catImages,
@@ -5168,10 +5257,11 @@ app.post("/category-images", async (req, res) => {
       currentSha
     );
 
-    log(`✅ Saved category image for: ${category}`);
-    res.sendStatus(200);
+    log(`✅ Saved category image for: ${category}, new SHA: ${saveResult?.sha}`);
+    res.json({ ok: true, sha: saveResult?.sha });
   } catch (e) {
-    console.error("❌ /category-images error:", e.message);
+    console.error("❌ /category-images POST error:", e.message);
+    console.error("❌ /category-images POST error stack:", e.stack);
     res.status(500).send(e.message);
   }
 });

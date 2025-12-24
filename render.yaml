@@ -15,5 +15,5 @@ services:
       - key: GITHUB_DATA_REPO
         value: mediatracker-data
       - key: GITHUB_IMAGE_REPOS
-        value: mediatracker-images-1
+        value: mediatracker-images-1,mediatracker-images-2,mediatracker-images-3,mediatracker-images-4,mediatracker-images-5
 

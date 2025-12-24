@@ -142,6 +142,15 @@ class MediaTracker {
         };
     }
 
+    // Helper to proxy GitHub images
+    getProxiedImageUrl(url) {
+        if (!url) return '';
+        if (url.includes('raw.githubusercontent.com') || (url.includes('github.com') && url.includes('/blob/'))) {
+            return `${API_URL}/api/github-image?url=${encodeURIComponent(url)}`;
+        }
+        return url;
+    }
+
     // ---------- INIT ----------
     async init() {
         // 1) Load from DB first (items + settings)
@@ -1827,33 +1836,42 @@ class MediaTracker {
     }
 
     async loadCategoryImages() {
+        console.log('🖼️ Loading category images from GitHub...');
         try {
             const response = await apiFetch(`${API_URL}/category-images`);
+            console.log(`🖼️ Load response status: ${response.status}`);
 
             // Check if response is actually JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                console.warn('Category images endpoint returned non-JSON response, skipping load');
+                console.warn('⚠️ Category images endpoint returned non-JSON response, skipping load');
                 return;
             }
 
             if (response.ok) {
                 const images = await response.json();
+                console.log(`✅ Loaded ${images.length} category images:`, images.map(i => i.category));
+
                 images.forEach(item => {
                     const img = document.getElementById(`img-${item.category}`);
                     if (img && item.image) {
                         img.src = item.image;
+                        console.log(`🖼️ Applied image to ${item.category}`);
+                    } else {
+                        console.warn(`⚠️ Could not apply image for ${item.category} - img element:`, !!img, ', has image:', !!item.image);
                     }
                 });
             } else {
-                console.warn(`Failed to load category images: ${response.status} ${response.statusText}`);
+                const errorText = await response.text();
+                console.warn(`❌ Failed to load category images: ${response.status} ${response.statusText} - ${errorText}`);
             }
         } catch (err) {
-            console.error('Failed to load category images from GitHub:', err);
+            console.error('❌ Failed to load category images from GitHub:', err);
         }
     }
 
     async saveCategoryImage(category, base64) {
+        console.log(`🖼️ Saving category image for: ${category}, size: ${base64.length} chars`);
         try {
             const response = await apiFetch(`${API_URL}/category-images`, {
                 method: 'POST',
@@ -1861,14 +1879,19 @@ class MediaTracker {
                 body: JSON.stringify({ category, image: base64 })
             });
 
+            console.log(`🖼️ Save response status: ${response.status}`);
+
             if (!response.ok) {
-                throw new Error('Failed to save category image');
+                const errorText = await response.text();
+                console.error(`❌ Failed to save category image: ${response.status} - ${errorText}`);
+                throw new Error(`Failed to save category image: ${errorText}`);
             }
 
-            console.log(`Category image for ${category} saved to GitHub`);
+            const result = await response.json();
+            console.log(`✅ Category image for ${category} saved to GitHub, SHA: ${result.sha}`);
         } catch (err) {
-            console.error('Failed to save category image to GitHub:', err);
-            alert('Failed to save category image. Please try again.');
+            console.error('❌ Failed to save category image to GitHub:', err);
+            alert('Failed to save category image. Check console for details.');
         }
     }
 
@@ -3403,8 +3426,14 @@ class MediaTracker {
 
     getDetailBannerSource(item) {
         if (!item) return '';
-        if (item.bannerBase64) return item.bannerBase64;
-        if (item.bannerPath) return `${API_URL}/${item.bannerPath}`;
+        if (item.bannerBase64) {
+            // Proxy GitHub URLs even if they're in bannerBase64 (happens when bannerPath is mapped to bannerBase64 during load)
+            return this.getProxiedImageUrl(item.bannerBase64);
+        }
+        if (item.bannerPath) {
+            const p = item.bannerPath.startsWith('http') ? item.bannerPath : `${API_URL}/${item.bannerPath}`;
+            return this.getProxiedImageUrl(p);
+        }
         // Avoid returning generated asset banner for Spotify artists (they use external images)
         // Treat non-numeric externalApiId or explicit spotify source as Spotify
         const isSpotify = (item.source === 'spotify') ||
@@ -3413,11 +3442,13 @@ class MediaTracker {
             (item.socialMedia && item.socialMedia.includes('spotify'));
         if (isSpotify) {
             // Prefer poster image for artist (square) rather than banner
-            if (item.posterBase64) return item.posterBase64;
-            if (item.posterPath) return `${API_URL}/${item.posterPath}`;
+            if (item.posterBase64) return this.getProxiedImageUrl(item.posterBase64);
+            if (item.posterPath) {
+                const p = item.posterPath.startsWith('http') ? item.posterPath : `${API_URL}/${item.posterPath}`;
+                return this.getProxiedImageUrl(p);
+            }
             return '';
         }
-        if (item.id) return `${API_URL}/assets/img/${item.id}_banner.webp`;
         return '';
     }
 
@@ -5130,9 +5161,13 @@ class MediaTracker {
         const bannerImage = document.getElementById('sequelsBannerImage');
         const sequelsView = document.getElementById('sequelsView');
         // Use bannerPath if available, fallback to bannerBase64 for migration
-        const bannerSrc = collection.bannerPath
-            ? `${API_URL}/${collection.bannerPath}`
-            : (collection.bannerBase64 || '');
+        // Proxy GitHub URLs for both
+        let bannerSrc = '';
+        if (collection.bannerPath) {
+            bannerSrc = this.getProxiedImageUrl(collection.bannerPath.startsWith('http') ? collection.bannerPath : `${API_URL}/${collection.bannerPath}`);
+        } else if (collection.bannerBase64) {
+            bannerSrc = this.getProxiedImageUrl(collection.bannerBase64);
+        }
         if (bannerSrc) {
             bannerImage.src = bannerSrc;
             bannerImage.style.display = 'block';
@@ -7487,7 +7522,7 @@ class MediaTracker {
         const img = document.createElement('img');
         img.loading = "lazy";
         img.decoding = "async";
-        img.src = item.posterBase64 || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+';
+        img.src = this.getProxiedImageUrl(item.posterPath) || this.getProxiedImageUrl(item.posterBase64) || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+';
         img.alt = item.name;
 
         // Checkbox overlay (shown only in delete mode)
@@ -7596,9 +7631,13 @@ class MediaTracker {
         img.loading = "lazy";
         img.decoding = "async";
         // Use posterPath if available, fallback to posterBase64 for migration
-        const posterSrc = collection.posterPath
-            ? `${API_URL}/${collection.posterPath}`
-            : (collection.posterBase64 || '');
+        // Proxy GitHub URLs for both sources
+        let posterSrc = '';
+        if (collection.posterPath) {
+            posterSrc = this.getProxiedImageUrl(collection.posterPath.startsWith('http') ? collection.posterPath : `${API_URL}/${collection.posterPath}`);
+        } else if (collection.posterBase64) {
+            posterSrc = this.getProxiedImageUrl(collection.posterBase64);
+        }
         if (posterSrc) {
             img.src = posterSrc;
         } else {
@@ -7607,9 +7646,9 @@ class MediaTracker {
             const firstItem = firstItemId ? this.data.items.find(item => item.id === firstItemId) : null;
 
             if (firstItem && firstItem.posterBase64) {
-                img.src = firstItem.posterBase64;
+                img.src = this.getProxiedImageUrl(firstItem.posterBase64);
             } else if (firstItem) {
-                img.src = `${API_URL}/assets/img/${firstItem.id}_poster.webp`;
+                img.src = this.getProxiedImageUrl(firstItem.posterPath) || this.getProxiedImageUrl(firstItem.posterBase64) || `${API_URL}/assets/img/${firstItem.id}_poster.webp`;
             } else {
                 img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+';
             }
@@ -7708,8 +7747,11 @@ class MediaTracker {
 
         const posterEl = document.getElementById('detailPoster');
         if (posterEl) {
-            if (item.posterBase64) {
-                posterEl.src = item.posterBase64;
+            if (item.posterPath) {
+                posterEl.src = this.getProxiedImageUrl(item.posterPath);
+            } else if (item.posterBase64) {
+                // Proxy GitHub URLs even if in posterBase64
+                posterEl.src = this.getProxiedImageUrl(item.posterBase64);
             } else if (item.id) {
                 posterEl.src = `${API_URL}/assets/img/${item.id}_poster.webp`;
             } else {
@@ -8204,7 +8246,9 @@ class MediaTracker {
 
                                 if (dbAnime) {
                                     // Use database poster
-                                    if (dbAnime.posterBase64) {
+                                    if (dbAnime.posterPath) {
+                                        posterSrc = this.getProxiedImageUrl(dbAnime.posterPath);
+                                    } else if (dbAnime.posterBase64) {
                                         posterSrc = dbAnime.posterBase64;
                                     } else if (dbAnime.id) {
                                         posterSrc = `${API_URL}/assets/img/${dbAnime.id}_poster.webp`;
@@ -8305,7 +8349,9 @@ class MediaTracker {
 
                                 if (dbAnime) {
                                     // Use database poster
-                                    if (dbAnime.posterBase64) {
+                                    if (dbAnime.posterPath) {
+                                        posterSrc = this.getProxiedImageUrl(dbAnime.posterPath);
+                                    } else if (dbAnime.posterBase64) {
                                         posterSrc = dbAnime.posterBase64;
                                     } else if (dbAnime.id) {
                                         posterSrc = `${API_URL}/assets/img/${dbAnime.id}_poster.webp`;
@@ -9564,7 +9610,9 @@ class MediaTracker {
 
             if (matchingActor) {
                 // Use the actor's library image (prioritize posterBase64, fallback to webp file)
-                if (matchingActor.posterBase64) {
+                if (matchingActor.posterPath) {
+                    img.src = this.getProxiedImageUrl(matchingActor.posterPath);
+                } else if (matchingActor.posterBase64) {
                     img.src = matchingActor.posterBase64;
                 } else if (matchingActor.id) {
                     // Try to load webp file, fallback to TMDB if it fails
@@ -9794,7 +9842,7 @@ class MediaTracker {
 
         const html = linkedMovies.map(movie => `
             <div class="linked-movie-grid-item" data-movie-id="${movie.id}">
-                <img src="${movie.posterBase64 || `${API_URL}/assets/img/${movie.id}_poster.webp`}" alt="${movie.name}" />
+                <img src="${this.getProxiedImageUrl(movie.posterPath) || movie.posterBase64 || `${API_URL}/assets/img/${movie.id}_poster.webp`}" alt="${movie.name}" />
                 <div class="linked-movie-overlay">
                     <div class="linked-movie-name">${movie.name}</div>
                 </div>
@@ -10071,7 +10119,7 @@ class MediaTracker {
         }
 
         const html = displayMovies.map(movie => {
-            const posterSrc = movie.posterBase64 || (movie.id && !movie.isTransient ? `${API_URL}/assets/img/${movie.id}_poster.webp` : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+');
+            const posterSrc = this.getProxiedImageUrl(movie.posterPath) || movie.posterBase64 || (movie.id && !movie.isTransient ? `${API_URL}/assets/img/${movie.id}_poster.webp` : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+');
             return `
                 <div class="linked-movie-grid-item" data-movie-id="${movie.id}" data-external-id="${movie.externalApiId}" data-media-type="${movie.type}" data-is-transient="${movie.isTransient || false}">
                     <img src="${posterSrc}" alt="${movie.name}" />
@@ -11916,12 +11964,19 @@ class MediaTracker {
                 dbItem.actor_roles = JSON.stringify(item.actorRoles);
             }
 
-            // Only send base64 data if it's actually base64 (from new upload), not URLs
+            // Send base64 data if it's actual base64 (from new upload)
+            // Or send as posterPath if it's already a URL (from external API like TMDB/MAL/Spotify)
             if (item.posterBase64?.startsWith('data:image')) {
                 dbItem.posterBase64 = item.posterBase64;
+            } else if (item.posterBase64?.startsWith('http')) {
+                // It's an external URL, send it as posterPath so server can store it directly
+                dbItem.posterPath = item.posterBase64;
             }
             if (item.bannerBase64?.startsWith('data:image')) {
                 dbItem.bannerBase64 = item.bannerBase64;
+            } else if (item.bannerBase64?.startsWith('http')) {
+                // It's an external URL, send it as bannerPath so server can store it directly
+                dbItem.bannerPath = item.bannerBase64;
             }
 
             const resp = await apiFetch(`${API_URL}/add`, {
@@ -12259,8 +12314,17 @@ class MediaTracker {
                     genre: row.genre || "",
                     description: row.description || "",
                     myRank: row.myRank != null ? parseFloat(row.myRank) || 0 : 0,
-                    posterBase64: row.posterPath ? `${API_URL}/${row.posterPath}` : "",
-                    bannerBase64: row.bannerPath ? `${API_URL}/${row.bannerPath}` : "",
+                    // Handle absolute URLs, relative paths, and bare filenames
+                    posterBase64: row.posterPath
+                        ? (row.posterPath.startsWith('http')
+                            ? row.posterPath
+                            : (row.posterPath.includes('/') ? `${API_URL}/${row.posterPath}` : `${API_URL}/assets/img/${row.posterPath}`))
+                        : "",
+                    bannerBase64: row.bannerPath
+                        ? (row.bannerPath.startsWith('http')
+                            ? row.bannerPath
+                            : (row.bannerPath.includes('/') ? `${API_URL}/${row.bannerPath}` : `${API_URL}/assets/img/${row.bannerPath}`))
+                        : "",
                     gender: row.gender || "",
                     birthday: row.birthday || "",
                     placeOfBirth: row.placeOfBirth || "",
