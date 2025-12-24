@@ -1,4 +1,4 @@
-﻿// script.js
+// script.js
 const API_URL = window.location.origin.startsWith("http")
     ? window.location.origin
     : "http://localhost:3000"; // connect to your local GitHub server
@@ -66,7 +66,7 @@ class MediaTracker {
         // Watchlist toggle state
         this.showWatchlistInLibrary = false;
 
-        // In-memory model (synced from server)
+        // In-memory model (synced from GitHub)
         this.data = {
             items: [],
             settings: {
@@ -396,7 +396,7 @@ class MediaTracker {
         await this.loadItemsFromDB();
         await this.loadSettingsFromDB();
 
-        // Load collections from server
+        // Load collections from GitHub
         await this.loadCollectionsFromDB();
 
         // 2) Apply settings to CSS vars
@@ -1258,7 +1258,7 @@ class MediaTracker {
                 this.data.settings.tabBackgrounds = this.data.settings.tabBackgrounds || {};
             }
         } catch (err) {
-            console.error("âŒ Error loading settings from DB:", err);
+            console.error("❌ Error loading settings from DB:", err);
         }
     }
 
@@ -1268,9 +1268,9 @@ class MediaTracker {
             const res = await apiFetch(`${API_URL}/collections`);
             if (!res.ok) throw new Error(await res.text());
             this.collections = await res.json();
-            console.log("âœ… Loaded collections from server:", this.collections.length);
+            console.log("✅ Loaded collections from GitHub:", this.collections.length);
         } catch (err) {
-            console.error("âŒ Error loading collections from DB:", err);
+            console.error("❌ Error loading collections from DB:", err);
             this.collections = [];
         }
     }
@@ -1285,9 +1285,9 @@ class MediaTracker {
                     body: JSON.stringify(collection)
                 });
             }
-            console.log("âœ… Saved collections to server");
+            console.log("✅ Saved collections to GitHub");
         } catch (err) {
-            console.error("âŒ Error saving collections to DB:", err);
+            console.error("❌ Error saving collections to DB:", err);
         }
     }
 
@@ -1298,9 +1298,9 @@ class MediaTracker {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(collection)
             });
-            console.log("âœ… Saved collection to server:", collection.name);
+            console.log("✅ Saved collection to GitHub:", collection.name);
         } catch (err) {
-            console.error("âŒ Error saving collection to DB:", err);
+            console.error("❌ Error saving collection to DB:", err);
         }
     }
 
@@ -1311,9 +1311,9 @@ class MediaTracker {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
             });
-            console.log("âœ… Updated collection in server:", collectionId);
+            console.log("✅ Updated collection in GitHub:", collectionId);
         } catch (err) {
-            console.error("âŒ Error updating collection in DB:", err);
+            console.error("❌ Error updating collection in DB:", err);
         }
     }
 
@@ -1322,9 +1322,9 @@ class MediaTracker {
             await apiFetch(`${API_URL}/collections/${collectionId}`, {
                 method: "DELETE"
             });
-            console.log("âœ… Deleted collection from server:", collectionId);
+            console.log("✅ Deleted collection from GitHub:", collectionId);
         } catch (err) {
-            console.error("âŒ Error deleting collection from DB:", err);
+            console.error("❌ Error deleting collection from DB:", err);
         }
     }
 
@@ -1423,9 +1423,9 @@ class MediaTracker {
                 body: JSON.stringify(this.data.settings),
                 credentials: 'include'
             });
-            console.log("âœ… Settings saved to server");
+            console.log("✅ Settings saved to GitHub");
         } catch (err) {
-            console.error("âŒ Error saving settings to DB:", err);
+            console.error("❌ Error saving settings to DB:", err);
         }
     }
 
@@ -1547,7 +1547,7 @@ class MediaTracker {
                     if (previewImg) previewImg.src = url;
                 }
 
-                // Save to server
+                // Save to GitHub
                 await this.saveCategoryImage(cat, url);
 
                 // Clear inputs
@@ -1571,7 +1571,7 @@ class MediaTracker {
                     if (previewImg) previewImg.src = '';
                 }
 
-                // Save empty to server
+                // Save empty to GitHub
                 await this.saveCategoryImage(cat, '');
 
                 // Clear inputs and preview
@@ -1998,7 +1998,7 @@ class MediaTracker {
             actors: 'People'
         };
 
-        // Load saved images from server
+        // Load saved images from GitHub
         await this.loadCategoryImages();
 
         // Initialize preview with first category (anime)
@@ -2036,7 +2036,7 @@ class MediaTracker {
                             const smallImg = document.getElementById(`img-${category}`);
                             if (smallImg) smallImg.src = base64;
 
-                            // Save to server
+                            // Save to GitHub
                             await this.saveCategoryImage(category, base64);
                         };
                         reader.readAsDataURL(file);
@@ -2077,7 +2077,7 @@ class MediaTracker {
                                 if (previewImg) previewImg.src = base64;
                             }
 
-                            // Save to server
+                            // Save to GitHub
                             await this.saveCategoryImage(category, base64);
                         };
                         reader.readAsDataURL(file);
@@ -2088,42 +2088,42 @@ class MediaTracker {
     }
 
     async loadCategoryImages() {
-        console.log('ðŸ–¼ï¸ Loading category images from server...');
+        console.log('🖼️ Loading category images from GitHub...');
         try {
             const response = await apiFetch(`${API_URL}/category-images`);
-            console.log(`ðŸ–¼ï¸ Load response status: ${response.status}`);
+            console.log(`🖼️ Load response status: ${response.status}`);
 
             // Check if response is actually JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                console.warn('âš ï¸ Category images endpoint returned non-JSON response, skipping load');
+                console.warn('⚠️ Category images endpoint returned non-JSON response, skipping load');
                 return;
             }
 
             if (response.ok) {
                 const images = await response.json();
-                console.log(`âœ… Loaded ${images.length} category images:`, images.map(i => i.category));
+                console.log(`✅ Loaded ${images.length} category images:`, images.map(i => i.category));
 
                 images.forEach(item => {
                     const img = document.getElementById(`img-${item.category}`);
                     if (img && item.image) {
                         img.src = item.image;
-                        console.log(`ðŸ–¼ï¸ Applied image to ${item.category}`);
+                        console.log(`🖼️ Applied image to ${item.category}`);
                     } else {
-                        console.warn(`âš ï¸ Could not apply image for ${item.category} - img element:`, !!img, ', has image:', !!item.image);
+                        console.warn(`⚠️ Could not apply image for ${item.category} - img element:`, !!img, ', has image:', !!item.image);
                     }
                 });
             } else {
                 const errorText = await response.text();
-                console.warn(`âŒ Failed to load category images: ${response.status} ${response.statusText} - ${errorText}`);
+                console.warn(`❌ Failed to load category images: ${response.status} ${response.statusText} - ${errorText}`);
             }
         } catch (err) {
-            console.error('âŒ Failed to load category images from server:', err);
+            console.error('❌ Failed to load category images from GitHub:', err);
         }
     }
 
     async saveCategoryImage(category, base64) {
-        console.log(`ðŸ–¼ï¸ Saving category image for: ${category}, size: ${base64.length} chars`);
+        console.log(`🖼️ Saving category image for: ${category}, size: ${base64.length} chars`);
         try {
             const response = await apiFetch(`${API_URL}/category-images`, {
                 method: 'POST',
@@ -2131,18 +2131,18 @@ class MediaTracker {
                 body: JSON.stringify({ category, image: base64 })
             });
 
-            console.log(`ðŸ–¼ï¸ Save response status: ${response.status}`);
+            console.log(`🖼️ Save response status: ${response.status}`);
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error(`âŒ Failed to save category image: ${response.status} - ${errorText}`);
+                console.error(`❌ Failed to save category image: ${response.status} - ${errorText}`);
                 throw new Error(`Failed to save category image: ${errorText}`);
             }
 
             const result = await response.json();
-            console.log(`âœ… Category image for ${category} saved to server, SHA: ${result.sha}`);
+            console.log(`✅ Category image for ${category} saved to GitHub, SHA: ${result.sha}`);
         } catch (err) {
-            console.error('âŒ Failed to save category image to server:', err);
+            console.error('❌ Failed to save category image to GitHub:', err);
             alert('Failed to save category image. Check console for details.');
         }
     }
@@ -2230,19 +2230,19 @@ class MediaTracker {
                     const tooltip = container?.querySelector('.rating-tooltip');
                     if (tooltip) {
                         const map = {
-                            '5': 'â­ 5  Masterpiece',
-                            '4.5': 'â­ 4.5  legendary',
-                            '4': 'â­ 4  Excellent',
-                            '3.5': 'â­ 3.5  Good',
-                            '3': 'â­ 3  Average',
-                            '2.5': 'â­ 2.5 Meh',
-                            '2': 'â­ 2  Bad',
-                            '1.5': 'â­ 1.5  Awful',
-                            '1': 'â­ 1  Trash',
-                            '0.5': 'â­ 0.5  zenah'
+                            '5': '⭐ 5  Masterpiece',
+                            '4.5': '⭐ 4.5  legendary',
+                            '4': '⭐ 4  Excellent',
+                            '3.5': '⭐ 3.5  Good',
+                            '3': '⭐ 3  Average',
+                            '2.5': '⭐ 2.5 Meh',
+                            '2': '⭐ 2  Bad',
+                            '1.5': '⭐ 1.5  Awful',
+                            '1': '⭐ 1  Trash',
+                            '0.5': '⭐ 0.5  zenah'
                         };
                         const key = (Math.round(rating * 2) / 2).toString();
-                        const label = map[key] || `â­ ${key} â€“`;
+                        const label = map[key] || `⭐ ${key} –`;
                         if (rating > 0) {
                             tooltip.textContent = label;
                             tooltip.style.display = 'block';
@@ -3006,9 +3006,9 @@ class MediaTracker {
                 }
             });
 
-            const avgDisplay = averageRank !== null ? averageRank.toFixed(1) : 'â€”';
+            const avgDisplay = averageRank !== null ? averageRank.toFixed(1) : '—';
             const ratedCountDisplay = rankedItems.length;
-            const latestYearDisplay = latestYear !== null ? latestYear : 'â€”';
+            const latestYearDisplay = latestYear !== null ? latestYear : '—';
 
             const palette = ['#4975ff', '#7A5CFF', '#FF6B6B', '#FFC260', '#26C6DA'];
             const sortedGenres = Array.from(genreCounts.values())
@@ -3103,7 +3103,7 @@ class MediaTracker {
                         <div class="insights-role-card">
                             <span class="insights-role-card-title">Favourite ${roleConfig.label}</span>
                             <span class="insights-role-card-name">${this.escapeHtml(favouriteEntity.name)}</span>
-                            <span class="insights-role-card-meta">${favouriteEntity.average.toFixed(1)} â˜… avg â€¢ ${favouriteEntity.ratedCount} rated</span>
+                            <span class="insights-role-card-meta">${favouriteEntity.average.toFixed(1)} ★ avg • ${favouriteEntity.ratedCount} rated</span>
                         </div>
                     `
                     : `
@@ -3143,7 +3143,7 @@ class MediaTracker {
                     <div class="insights-top-item">
                         <span class="insights-top-item-label">Top Rated</span>
                         <span class="insights-top-item-value">${this.escapeHtml(topRankedItem.name)}</span>
-                        <span class="insights-top-item-score">${topRankedItem.myRank.toFixed(1)} â˜…</span>
+                        <span class="insights-top-item-score">${topRankedItem.myRank.toFixed(1)} ★</span>
                     </div>
                 `
                 : `
@@ -3158,7 +3158,7 @@ class MediaTracker {
                     <div class="insights-low-item">
                         <span class="insights-low-item-label">Lowest Rated</span>
                         <span class="insights-low-item-value">${this.escapeHtml(lowestRankedItem.name)}</span>
-                        <span class="insights-low-item-score">${lowestRankedItem.myRank.toFixed(1)} â˜…</span>
+                        <span class="insights-low-item-score">${lowestRankedItem.myRank.toFixed(1)} ★</span>
                     </div>
                 `
                 : `
@@ -3293,7 +3293,7 @@ class MediaTracker {
                 timeStatValue = `${totalDays} d (${totalHours} h)`;
                 timeStatSub = `${totalHours} h across ${items.length} item${items.length === 1 ? '' : 's'}`;
             }
-            const bucketLabels = ['0â˜…', '0.5â˜…', '1â˜…', '1.5â˜…', '2â˜…', '2.5â˜…', '3â˜…', '3.5â˜…', '4â˜…', '4.5â˜…', '5â˜…'];
+            const bucketLabels = ['0★', '0.5★', '1★', '1.5★', '2★', '2.5★', '3★', '3.5★', '4★', '4.5★', '5★'];
             const rankBuckets = Array(bucketLabels.length).fill(0);
             rankedItems.forEach(item => {
                 const rawRank = parseFloat(item.myRank);
@@ -3310,7 +3310,7 @@ class MediaTracker {
 
             const rankBarsMarkup = rankBuckets.map((count, index) => {
                 const heightPercent = maxBucketCount ? Math.max((count / maxBucketCount) * 100, 8) : 0;
-                const labelText = bucketLabels[index] || `${(index / 2).toFixed(1)}â˜…`;
+                const labelText = bucketLabels[index] || `${(index / 2).toFixed(1)}★`;
                 return `
                     <div class="insights-rank-bar" data-count="${count}" data-star="${labelText}">
                         <div class="insights-rank-bar-visual" style="height: ${heightPercent}%;"></div>
@@ -3355,7 +3355,7 @@ class MediaTracker {
                         </div>
                         <div class="insights-stat">
                             <span class="insights-stat-label">Top Genre</span>
-                            <span class="insights-stat-value">${topGenre ? this.escapeHtml(this.formatTitleCase(topGenre)) : 'â€”'}</span>
+                            <span class="insights-stat-value">${topGenre ? this.escapeHtml(this.formatTitleCase(topGenre)) : '—'}</span>
                             <span class="insights-stat-subvalue">${topGenre ? `${topGenreCount} title${topGenreCount === 1 ? '' : 's'}` : 'No genre data yet'}</span>
                         </div>
                         <div class="insights-stat">
@@ -4531,7 +4531,7 @@ class MediaTracker {
                 // This handles cases like "Nanatsu no Taizai" matching "Nanatsu no Taizai: Grudge of Edinburgh"
                 if (animeBaseName.startsWith(baseNameLower + ' ') ||
                     animeBaseName.startsWith(baseNameLower + ':') ||
-                    animeBaseName.startsWith(baseNameLower + 'ï¼š')) {
+                    animeBaseName.startsWith(baseNameLower + '：')) {
                     return true;
                 }
 
@@ -4539,7 +4539,7 @@ class MediaTracker {
                 // This handles reverse cases
                 if (baseNameLower.startsWith(animeBaseName + ' ') ||
                     baseNameLower.startsWith(animeBaseName + ':') ||
-                    baseNameLower.startsWith(animeBaseName + 'ï¼š')) {
+                    baseNameLower.startsWith(animeBaseName + '：')) {
                     return true;
                 }
 
@@ -4694,11 +4694,11 @@ class MediaTracker {
 
             // Search for games matching the base name
             // Normalize base name by removing special characters for better matching
-            const baseNameNormalized = baseName.toLowerCase().replace(/[Â®â„¢Â©]/g, '').trim();
+            const baseNameNormalized = baseName.toLowerCase().replace(/[®™©]/g, '').trim();
             const baseNameLower = baseName.toLowerCase().trim();
             const matchingApps = appList.filter(app => {
-                const appName = (app.name || '').toLowerCase().replace(/[Â®â„¢Â©]/g, '');
-                const appBaseName = this.extractBaseGameName(app.name || '').toLowerCase().replace(/[Â®â„¢Â©]/g, '').trim();
+                const appName = (app.name || '').toLowerCase().replace(/[®™©]/g, '');
+                const appBaseName = this.extractBaseGameName(app.name || '').toLowerCase().replace(/[®™©]/g, '').trim();
 
                 // Check if base name matches (more inclusive matching)
                 return appName.includes(baseNameNormalized) ||
@@ -5668,7 +5668,7 @@ class MediaTracker {
 
                     alert('Collection deleted successfully!');
                 } catch (error) {
-                    console.error('âŒ Error deleting collection:', error);
+                    console.error('❌ Error deleting collection:', error);
                     alert('Failed to delete collection. Please try again.');
                 }
             });
@@ -5818,7 +5818,7 @@ class MediaTracker {
         // Add to collections
         this.collections.push(collection);
 
-        // Save to server
+        // Save to GitHub
         await this.saveCollectionToDB(collection);
 
         // Select the newly created collection
@@ -5919,7 +5919,7 @@ class MediaTracker {
 
                 notification.innerHTML = `
                       <div style="background: var(--hover-color); opacity: 0.2; padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem; border: 1px solid var(--hover-color);">
-                          <span style="color: var(--text-color);">âœ“ Will be added to collection: <strong>${collection.name}</strong></span>
+                          <span style="color: var(--text-color);">✓ Will be added to collection: <strong>${collection.name}</strong></span>
                       </div>
                   `;
 
@@ -5950,9 +5950,9 @@ class MediaTracker {
     }
 
     normalizeForMatching(text) {
-        // Remove special characters: : ' " Â® â„¢ Â© and others, then normalize spaces
+        // Remove special characters: : ' " ® ™ © and others, then normalize spaces
         return (text || '')
-            .replace(/[Â®â„¢Â©:'"]/g, '')
+            .replace(/[®™©:'"]/g, '')
             .replace(/\s+/g, ' ')
             .trim()
             .toLowerCase();
@@ -6073,7 +6073,7 @@ class MediaTracker {
                 collection.itemIds.push(item.id);
                 console.log(`Auto-added "${item.name}" to collection "${collection.name}" (match score: ${bestMatch.score}, word score: ${bestMatch.wordScore})`);
 
-                // Save collections to server
+                // Save collections to GitHub
                 await this.saveCollectionToDB(collection);
             }
         }
@@ -6096,7 +6096,7 @@ class MediaTracker {
             // Update existing collection
             this.currentEditingCollection.itemIds = Array.from(this.currentCollectionItems);
 
-            // Save to server
+            // Save to GitHub
             await this.saveCollectionToDB(this.currentEditingCollection);
 
             // Show success message and go back to collection view
@@ -6121,7 +6121,7 @@ class MediaTracker {
         // Add to collections
         this.collections.push(collection);
 
-        // Save to server
+        // Save to GitHub
         await this.saveCollectionToDB(collection);
 
         // Show success message and go back
@@ -6151,7 +6151,7 @@ class MediaTracker {
 
             // Check if it's a raw item (missing externalApiId or description)
             if (!item.externalApiId || !item.description || item.description === 'No description available.') {
-                console.log('ðŸ” Enriching raw item for detail view:', {
+                console.log('🔍 Enriching raw item for detail view:', {
                     id: item.id,
                     type: item.type,
                     title: item.title || item.name,
@@ -6167,7 +6167,7 @@ class MediaTracker {
                     });
 
                     if (enriched) {
-                        console.log('âœ… Enriched item successfully:', {
+                        console.log('✅ Enriched item successfully:', {
                             id: enriched.id,
                             type: enriched.type,
                             title: enriched.title || enriched.name,
@@ -6201,7 +6201,7 @@ class MediaTracker {
                                     if (tmdbResponse.ok) {
                                         const tmdbData = await tmdbResponse.json();
                                         item.externalApiId = String(item.id);
-                                        console.log('âœ… Fetched TMDB data for detail sections, externalApiId:', item.externalApiId);
+                                        console.log('✅ Fetched TMDB data for detail sections, externalApiId:', item.externalApiId);
                                     }
                                 } catch (err) {
                                     console.warn('Failed to fetch TMDB data:', err);
@@ -6212,14 +6212,14 @@ class MediaTracker {
                                 try {
                                     const query = encodeURIComponent(item.title || item.name || '');
                                     const serviceType = item.type === 'movies' ? 'movie' : (item.type === 'tv' ? 'tv' : '');
-                                    console.log('ðŸ”Ž Attempting TMDB search fallback for title:', item.title, 'type:', serviceType);
+                                    console.log('🔎 Attempting TMDB search fallback for title:', item.title, 'type:', serviceType);
                                     const searchResp = await apiFetch(`${API_URL}/api/search?query=${query}&category=${serviceType}&service=tmdb`);
                                     if (searchResp.ok) {
                                         const searchData = await searchResp.json();
                                         const first = (searchData.results && searchData.results.length) ? searchData.results[0] : null;
                                         if (first && first.id) {
                                             item.externalApiId = String(first.id);
-                                            console.log('âœ… TMDB search fallback found id:', item.externalApiId, 'for', item.title);
+                                            console.log('✅ TMDB search fallback found id:', item.externalApiId, 'for', item.title);
                                             // Populate poster/banner URLs from the search result so the detail view can show images immediately
                                             try {
                                                 if (!item.posterBase64) {
@@ -6465,13 +6465,13 @@ class MediaTracker {
         // If showing watchlist, show ALL watchlisted items (library + on-demand)
         if (this.showWatchlistInLibrary) {
             const watchlist = this.getWatchlist();
-            console.log(`ðŸ“‹ Watchlist toggle active - Total items in watchlist: ${watchlist.length}`);
-            console.log(`ðŸ“‹ Watchlist items by type:`, watchlist.reduce((acc, w) => { acc[w.type || 'undefined'] = (acc[w.type || 'undefined'] || 0) + 1; return acc; }, {}));
-            console.log(`ðŸ“‹ Current tab: ${this.currentTab}`);
+            console.log(`📋 Watchlist toggle active - Total items in watchlist: ${watchlist.length}`);
+            console.log(`📋 Watchlist items by type:`, watchlist.reduce((acc, w) => { acc[w.type || 'undefined'] = (acc[w.type || 'undefined'] || 0) + 1; return acc; }, {}));
+            console.log(`📋 Current tab: ${this.currentTab}`);
 
             // Filter watchlist by current tab
             const watchlistForTab = watchlist.filter(w => w.type === this.currentTab);
-            console.log(`ðŸ“‹ Watchlist items matching current tab '${this.currentTab}': ${watchlistForTab.length}`);
+            console.log(`📋 Watchlist items matching current tab '${this.currentTab}': ${watchlistForTab.length}`);
 
             // Map to library items if available, otherwise keep watchlist item
             const combinedItems = watchlistForTab.map(w => {
@@ -6487,7 +6487,7 @@ class MediaTracker {
             // Apply filters (search, sort, etc.)
             items = this.applyFilters(combinedItems);
 
-            console.log(`ðŸ“‹ Watchlist view: Showing ${items.length} items for ${this.currentTab}`);
+            console.log(`📋 Watchlist view: Showing ${items.length} items for ${this.currentTab}`);
             items.forEach(item => container.appendChild(this.createGridItem(item, { showRank: true })));
             return;
         }
@@ -6510,14 +6510,14 @@ class MediaTracker {
                     if (collection.type) {
                         const matches = collection.type === this.currentTab;
                         if (matches) {
-                            console.log(`ðŸ“¦ Showing empty collection created in "${this.currentTab}" tab: "${collection.name}"`);
+                            console.log(`📦 Showing empty collection created in "${this.currentTab}" tab: "${collection.name}"`);
                         } else {
-                            console.log(`ðŸ“¦ Hiding empty collection created in "${collection.type}" tab (current: "${this.currentTab}"): "${collection.name}"`);
+                            console.log(`📦 Hiding empty collection created in "${collection.type}" tab (current: "${this.currentTab}"): "${collection.name}"`);
                         }
                         return matches;
                     }
                     // If no type field, show it (for backward compatibility with old collections)
-                    console.log(`ðŸ“¦ Showing empty collection (no type): "${collection.name}"`);
+                    console.log(`📦 Showing empty collection (no type): "${collection.name}"`);
                     return true;
                 }
                 // Show collections that have at least one item from current tab
@@ -6530,14 +6530,14 @@ class MediaTracker {
                     if (collection.type) {
                         const matches = collection.type === this.currentTab;
                         if (matches) {
-                            console.log(`ðŸ“¦ Showing collection with invalid itemIds (created in "${this.currentTab}" tab): "${collection.name}"`);
+                            console.log(`📦 Showing collection with invalid itemIds (created in "${this.currentTab}" tab): "${collection.name}"`);
                         } else {
-                            console.log(`ðŸ“¦ Hiding collection with invalid itemIds (created in "${collection.type}" tab, current: "${this.currentTab}"): "${collection.name}"`);
+                            console.log(`📦 Hiding collection with invalid itemIds (created in "${collection.type}" tab, current: "${this.currentTab}"): "${collection.name}"`);
                         }
                         return matches;
                     }
                     // If no type field, show it (for backward compatibility)
-                    console.log(`ðŸ“¦ Showing collection with invalid itemIds (no type): "${collection.name}"`);
+                    console.log(`📦 Showing collection with invalid itemIds (no type): "${collection.name}"`);
                     return true;
                 }
                 // Show if it has at least one valid item from current tab
@@ -6546,14 +6546,14 @@ class MediaTracker {
                     return item && item.type === this.currentTab;
                 });
                 if (!hasMatchingItem) {
-                    console.log(`ðŸ“¦ Hiding collection "${collection.name}" - has ${validItemIds.length} items but none match current tab "${this.currentTab}"`);
+                    console.log(`📦 Hiding collection "${collection.name}" - has ${validItemIds.length} items but none match current tab "${this.currentTab}"`);
                 } else {
-                    console.log(`ðŸ“¦ Showing collection "${collection.name}" - has items matching tab "${this.currentTab}"`);
+                    console.log(`📦 Showing collection "${collection.name}" - has items matching tab "${this.currentTab}"`);
                 }
                 return hasMatchingItem;
             });
 
-            console.log(`ðŸ“š Total collections: ${this.collections.length}, Showing: ${collectionsToShow.length}, Current tab: ${this.currentTab}`);
+            console.log(`📚 Total collections: ${this.collections.length}, Showing: ${collectionsToShow.length}, Current tab: ${this.currentTab}`);
 
             // Apply search filter to collections if there's a search term
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
@@ -7266,7 +7266,7 @@ class MediaTracker {
 
             const playIcon = document.createElement('div');
             playIcon.className = 'play-icon';
-            playIcon.innerHTML = 'â–¶';
+            playIcon.innerHTML = '▶';
 
             const infoOverlay = document.createElement('div');
             infoOverlay.className = 'trailer-info-overlay';
@@ -7303,11 +7303,11 @@ class MediaTracker {
         // Navigation Buttons
         const prevBtn = document.createElement('button');
         prevBtn.className = 'carousel-nav-btn carousel-prev';
-        prevBtn.innerHTML = 'â€¹';
+        prevBtn.innerHTML = '‹';
 
         const nextBtn = document.createElement('button');
         nextBtn.className = 'carousel-nav-btn carousel-next';
-        nextBtn.innerHTML = 'â€º';
+        nextBtn.innerHTML = '›';
 
         carouselContainer.appendChild(track);
         carouselContainer.appendChild(prevBtn);
@@ -7596,7 +7596,7 @@ class MediaTracker {
 
                 const playBtn = document.createElement('div');
                 playBtn.className = 'home-hover-play-button';
-                playBtn.textContent = 'â–¶';
+                playBtn.textContent = '▶';
                 overlay.appendChild(playBtn);
 
                 posterDiv.appendChild(overlay);
@@ -7660,7 +7660,7 @@ class MediaTracker {
 
             if (id) {
                 try {
-                    console.log(`ðŸŽ¬ Fetching trailer for ${mediaType} ${id}...`);
+                    console.log(`🎬 Fetching trailer for ${mediaType} ${id}...`);
                     const response = await apiFetch(`${API_URL}/api/videos?category=${mediaType}&id=${id}`);
                     if (response.ok) {
                         const data = await response.json();
@@ -7670,7 +7670,7 @@ class MediaTracker {
                             videos.find(v => v.site === 'YouTube'); // Fallback to any YouTube video
 
                         if (trailer) {
-                            console.log(`âœ… Found trailer: ${trailer.key}`);
+                            console.log(`✅ Found trailer: ${trailer.key}`);
                             this.openTrailerModal(trailer.key);
                             return;
                         }
@@ -7826,7 +7826,7 @@ class MediaTracker {
             if (roles.length) {
                 const rolesDiv = document.createElement('div');
                 rolesDiv.className = 'grid-item-actor-roles';
-                rolesDiv.textContent = roles.slice(0, 2).join(' â€¢ ');
+                rolesDiv.textContent = roles.slice(0, 2).join(' • ');
                 div.appendChild(rolesDiv);
             }
         }
@@ -7838,7 +7838,7 @@ class MediaTracker {
 
             const userScoreValue = Number.isFinite(item.userScore)
                 ? `${Math.round(item.userScore)}%`
-                : 'â€”';
+                : '—';
             const userScoreLabel = document.createElement('span');
             userScoreLabel.className = 'grid-item-user-score';
             userScoreLabel.textContent = userScoreValue;
@@ -7851,7 +7851,7 @@ class MediaTracker {
             for (let starValue = 1; starValue <= 5; starValue += 1) {
                 const star = document.createElement('span');
                 star.className = 'grid-item-rank-star';
-                star.textContent = 'â˜…';
+                star.textContent = '★';
 
                 if (normalizedRank >= starValue) {
                     star.classList.add('filled');
@@ -8205,7 +8205,7 @@ class MediaTracker {
                 const knownForHeading = document.getElementById('knownForHeading');
                 if (grid) {
                     // Clear previous content immediately to avoid flash of prior actor's Known For
-                    grid.innerHTML = '<div class="linked-loading">Loadingâ€¦</div>';
+                    grid.innerHTML = '<div class="linked-loading">Loading…</div>';
                 }
                 linkedMoviesContainer.style.display = 'block';
 
@@ -8307,7 +8307,7 @@ class MediaTracker {
             const meta = [];
             if (item.year) meta.push(item.year);
             if (item.genre) meta.push(item.genre);
-            document.getElementById('detailMeta').textContent = meta.join(' â€¢ ');
+            document.getElementById('detailMeta').textContent = meta.join(' • ');
 
             // Limit description to 466 characters (for everything except actors)
             const fullDescription = item.description || 'No description available.';
@@ -8864,32 +8864,32 @@ class MediaTracker {
             } else if (item.type === 'anime') {
                 const malId = this.getAnimeMalId(item);
                 if (!malId) {
-                    console.warn('â„¹ï¸ No MAL ID found for anime trailer lookup:', { itemId: item.id, itemName: item.name || item.title });
+                    console.warn('ℹ️ No MAL ID found for anime trailer lookup:', { itemId: item.id, itemName: item.name || item.title });
                 } else {
                     // MAL/Jikan API for anime - try multiple sources
                     try {
-                        console.log('ðŸŽ¬ Fetching anime trailer for MAL ID:', malId, 'Title:', item.title || item.name);
+                        console.log('🎬 Fetching anime trailer for MAL ID:', malId, 'Title:', item.title || item.name);
 
                         // First try: Get full anime data which includes trailer
                         const fullResponse = await fetch(`https://api.jikan.moe/v4/anime/${malId}/full`);
                         if (fullResponse.ok) {
                             const fullData = await fullResponse.json();
                             const trailerData = fullData.data?.trailer;
-                            console.log('ðŸ“º Anime trailer data from full endpoint:', trailerData);
+                            console.log('📺 Anime trailer data from full endpoint:', trailerData);
 
                             if (trailerData?.youtube_id) {
                                 trailerKey = trailerData.youtube_id;
-                                console.log('âœ… Found trailer youtube_id:', trailerKey);
+                                console.log('✅ Found trailer youtube_id:', trailerKey);
                             } else {
                                 const embedId = this.extractYouTubeId(trailerData?.embed_url);
                                 if (embedId) {
                                     trailerKey = embedId;
-                                    console.log('âœ… Extracted trailer from embed_url:', trailerKey);
+                                    console.log('✅ Extracted trailer from embed_url:', trailerKey);
                                 } else {
                                     const urlId = this.extractYouTubeId(trailerData?.url);
                                     if (urlId) {
                                         trailerKey = urlId;
-                                        console.log('âœ… Extracted trailer from url:', trailerKey);
+                                        console.log('✅ Extracted trailer from url:', trailerKey);
                                     }
                                 }
                             }
@@ -8897,22 +8897,22 @@ class MediaTracker {
 
                         // Second try: Use videos endpoint as fallback
                         if (!trailerKey) {
-                            console.log('âš ï¸ No trailer from full endpoint, trying videos endpoint...');
+                            console.log('⚠️ No trailer from full endpoint, trying videos endpoint...');
                             const videoResponse = await fetch(`https://api.jikan.moe/v4/anime/${malId}/videos`);
                             if (videoResponse.ok) {
                                 const videoData = await videoResponse.json();
                                 const promos = videoData.data?.promo || [];
-                                console.log('ðŸ“º Promo videos count:', promos.length);
+                                console.log('📺 Promo videos count:', promos.length);
 
                                 if (promos.length > 0) {
                                     for (const promo of promos) {
                                         const trailerUrl = promo.trailer?.url || promo.trailer?.embed_url;
                                         if (trailerUrl) {
-                                            console.log('ðŸ” Checking promo URL:', trailerUrl);
+                                            console.log('🔍 Checking promo URL:', trailerUrl);
                                             const extracted = this.extractYouTubeId(trailerUrl);
                                             if (extracted) {
                                                 trailerKey = extracted;
-                                                console.log('âœ… Extracted trailer from promo:', trailerKey);
+                                                console.log('✅ Extracted trailer from promo:', trailerKey);
                                                 break;
                                             }
                                         }
@@ -8923,12 +8923,12 @@ class MediaTracker {
 
                         // Third try: Check if there's a PV (promotional video) in the episodes/videos
                         if (!trailerKey) {
-                            console.log('âš ï¸ Still no trailer, checking videos/episodes endpoint...');
+                            console.log('⚠️ Still no trailer, checking videos/episodes endpoint...');
                             const episodesResponse = await fetch(`https://api.jikan.moe/v4/anime/${malId}/videos/episodes`);
                             if (episodesResponse.ok) {
                                 const episodesData = await episodesResponse.json();
                                 const episodes = episodesData.data || [];
-                                console.log('ðŸ“º Episode videos count:', episodes.length);
+                                console.log('📺 Episode videos count:', episodes.length);
 
                                 for (const episode of episodes) {
                                     if (episode.title?.toLowerCase().includes('pv') ||
@@ -8936,11 +8936,11 @@ class MediaTracker {
                                         episode.title?.toLowerCase().includes('preview')) {
                                         const videoUrl = episode.url;
                                         if (videoUrl) {
-                                            console.log('ðŸ” Found PV/Trailer episode:', episode.title, videoUrl);
+                                            console.log('🔍 Found PV/Trailer episode:', episode.title, videoUrl);
                                             const extracted = this.extractYouTubeId(videoUrl);
                                             if (extracted) {
                                                 trailerKey = extracted;
-                                                console.log('âœ… Extracted trailer from PV episode:', trailerKey);
+                                                console.log('✅ Extracted trailer from PV episode:', trailerKey);
                                                 break;
                                             }
                                         }
@@ -8949,12 +8949,12 @@ class MediaTracker {
                             }
                         }
                     } catch (err) {
-                        console.error('âŒ Error fetching anime trailer:', err);
+                        console.error('❌ Error fetching anime trailer:', err);
                     }
 
                     // Fourth try: Manual YouTube search as last resort
                     if (!trailerKey) {
-                        console.log('ðŸ” Trying YouTube search as fallback...');
+                        console.log('🔍 Trying YouTube search as fallback...');
                         try {
                             const searchQuery = `${item.title || item.name} anime trailer`;
                             const youtubeSearchResponse = await apiFetch(`${API_URL}/api/youtube-search?q=${encodeURIComponent(searchQuery)}`);
@@ -8962,36 +8962,36 @@ class MediaTracker {
                                 const searchData = await youtubeSearchResponse.json();
                                 if (searchData.videoId) {
                                     trailerKey = searchData.videoId;
-                                    console.log('âœ… Found trailer via YouTube search:', trailerKey);
+                                    console.log('✅ Found trailer via YouTube search:', trailerKey);
                                 }
                             }
                         } catch (searchErr) {
-                            console.error('âŒ YouTube search failed:', searchErr);
+                            console.error('❌ YouTube search failed:', searchErr);
                         }
                     }
 
                     if (trailerKey) {
-                        console.log('ðŸŽ‰ Using trailer key:', trailerKey);
+                        console.log('🎉 Using trailer key:', trailerKey);
                         trailerHtml = `<iframe src="https://www.youtube.com/embed/${trailerKey}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                     } else {
-                        console.log('â„¹ï¸ No trailer available for this anime (MAL ID:', malId, '). This is normal for some anime.');
+                        console.log('ℹ️ No trailer available for this anime (MAL ID:', malId, '). This is normal for some anime.');
                     }
                 }
             } else if (item.type === 'games') {
                 // Get Steam game details for trailer
                 if (item.externalApiId) {
-                    console.log('ðŸŽ® Fetching Steam game trailer for ID:', item.externalApiId);
+                    console.log('🎮 Fetching Steam game trailer for ID:', item.externalApiId);
                     try {
                         const response = await apiFetch(`${API_URL}/api/steam-game/${item.externalApiId}`);
                         if (response.ok) {
                             const game = await response.json();
                             const movies = game.movies || [];
-                            console.log('ðŸŽ¬ Steam movies/trailers:', movies);
+                            console.log('🎬 Steam movies/trailers:', movies);
 
                             if (movies.length > 0) {
                                 // Use the first movie (usually the main trailer)
                                 const trailer = movies[0];
-                                console.log('âœ… Using Steam trailer:', trailer);
+                                console.log('✅ Using Steam trailer:', trailer);
 
                                 // Steam stores videos with multiple possible URL patterns
                                 let videoUrls = [];
@@ -9033,7 +9033,7 @@ class MediaTracker {
                                     ];
 
                                     videoUrls = patterns.map(pattern => `${baseUrl}/${pattern}`);
-                                    console.log('ðŸ”§ Constructed', videoUrls.length, 'video URL patterns from thumbnail');
+                                    console.log('🔧 Constructed', videoUrls.length, 'video URL patterns from thumbnail');
                                 }
 
                                 // Priority 3: Try constructing from app ID directly
@@ -9048,7 +9048,7 @@ class MediaTracker {
                                         `${cdnBase}/movie480.mp4`,
                                         `${cdnBase}/movie.mp4`
                                     ];
-                                    console.log('ðŸ”§ Constructed', videoUrls.length, 'video URLs from CDN pattern');
+                                    console.log('🔧 Constructed', videoUrls.length, 'video URLs from CDN pattern');
                                 }
 
                                 if (videoUrls.length > 0) {
@@ -9067,31 +9067,31 @@ class MediaTracker {
                                     <div style="display:none; text-align:center; padding:2rem; background:rgba(0,0,0,0.5); border-radius:8px;">
                                         Video unavailable. <a href="https://store.steampowered.com/app/${item.externalApiId}" target="_blank" style="color:var(--hover-color);">View on Steam</a>
                                     </div>`;
-                                    console.log('ðŸŽ¬ Created video element with', videoUrls.length, 'source fallbacks');
+                                    console.log('🎬 Created video element with', videoUrls.length, 'source fallbacks');
                                 } else {
                                     // Final fallback: show thumbnail as clickable link to Steam
                                     if (trailer.thumbnail) {
                                         trailerHtml = `<div style="position: relative; cursor: pointer;" onclick="window.open('https://store.steampowered.com/app/${item.externalApiId}', '_blank')">
                                             <img src="${trailer.thumbnail}" style="width: 100%; border-radius: 8px;" alt="Trailer thumbnail">
-                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: white; text-shadow: 0 0 10px black;">â–¶</div>
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: white; text-shadow: 0 0 10px black;">▶</div>
                                             <div style="position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 4px; color: white; font-size: 0.9rem;">Click to watch on Steam</div>
                                         </div>`;
-                                        console.log('ðŸŽ¬ Created clickable thumbnail fallback');
+                                        console.log('🎬 Created clickable thumbnail fallback');
                                     } else {
-                                        console.warn('âš ï¸ No valid video source or thumbnail found');
+                                        console.warn('⚠️ No valid video source or thumbnail found');
                                     }
                                 }
                             } else {
-                                console.warn('âŒ No Steam trailer found for ID:', item.externalApiId);
+                                console.warn('❌ No Steam trailer found for ID:', item.externalApiId);
                             }
                         } else {
-                            console.warn('âŒ Failed to fetch Steam game data:', response.status);
+                            console.warn('❌ Failed to fetch Steam game data:', response.status);
                         }
                     } catch (err) {
-                        console.error('âŒ Error fetching Steam game trailer:', err);
+                        console.error('❌ Error fetching Steam game trailer:', err);
                     }
                 } else {
-                    console.warn('âš ï¸ No externalApiId for game trailer:', item.name || item.title);
+                    console.warn('⚠️ No externalApiId for game trailer:', item.name || item.title);
                 }
             }
 
@@ -9135,14 +9135,14 @@ class MediaTracker {
             } else if (item.type === 'anime') {
                 const malId = this.getAnimeMalId(item);
                 if (!malId) {
-                    console.warn('â„¹ï¸ No MAL ID found for anime recommendations lookup:', { itemId: item.id, itemName: item.name || item.title });
+                    console.warn('ℹ️ No MAL ID found for anime recommendations lookup:', { itemId: item.id, itemName: item.name || item.title });
                 } else {
                     // MAL recommendations - filter out current anime and duplicates
                     const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}/recommendations`);
                     if (response.ok) {
                         const data = await response.json();
                         const allRecs = data.data || [];
-                        console.log('ðŸ“º Raw anime recommendations:', allRecs.length);
+                        console.log('📺 Raw anime recommendations:', allRecs.length);
 
                         // Filter out duplicates and current anime
                         const seen = new Set();
@@ -9161,7 +9161,7 @@ class MediaTracker {
                             })
                             .slice(0, 6);
 
-                        console.log('âœ… Filtered anime recommendations:', recommendations.length);
+                        console.log('✅ Filtered anime recommendations:', recommendations.length);
                     }
                 }
             } else if (item.type === 'games') {
@@ -9171,11 +9171,11 @@ class MediaTracker {
                         const response = await apiFetch(`${API_URL}/api/steam-recommendations/${item.externalApiId}`);
                         if (response.ok) {
                             const data = await response.json();
-                            console.log('ðŸŽ® Steam recommendations data:', data);
+                            console.log('🎮 Steam recommendations data:', data);
 
                             // Steam returns app IDs, we need to fetch details for each
                             if (data.recommendations && Array.isArray(data.recommendations) && data.recommendations.length > 0) {
-                                console.log('ðŸ“¦ Fetching details for', data.recommendations.length, 'recommended games...');
+                                console.log('📦 Fetching details for', data.recommendations.length, 'recommended games...');
 
                                 // Fetch details for each recommended game
                                 const detailPromises = data.recommendations.slice(0, 6).map(async (rec) => {
@@ -9200,18 +9200,18 @@ class MediaTracker {
 
                                 const detailedRecs = await Promise.all(detailPromises);
                                 recommendations = detailedRecs.filter(rec => rec !== null);
-                                console.log('âœ… Loaded', recommendations.length, 'game recommendations with details');
+                                console.log('✅ Loaded', recommendations.length, 'game recommendations with details');
                             } else {
-                                console.log('â„¹ï¸ No Steam recommendations returned for this game');
+                                console.log('ℹ️ No Steam recommendations returned for this game');
                             }
                         } else {
-                            console.warn('âŒ Failed to fetch Steam recommendations:', response.status);
+                            console.warn('❌ Failed to fetch Steam recommendations:', response.status);
                         }
                     } catch (err) {
-                        console.error('âŒ Error fetching Steam recommendations:', err);
+                        console.error('❌ Error fetching Steam recommendations:', err);
                     }
                 } else {
-                    console.warn('âš ï¸ No externalApiId for game recommendations:', item.name || item.title);
+                    console.warn('⚠️ No externalApiId for game recommendations:', item.name || item.title);
                 }
             }
 
@@ -9345,7 +9345,7 @@ class MediaTracker {
             } else if (item.type === 'anime') {
                 const malId = this.getAnimeMalId(item);
                 if (!malId) {
-                    console.warn('â„¹ï¸ No MAL ID found for anime reviews lookup:', { itemId: item.id, itemName: item.name || item.title });
+                    console.warn('ℹ️ No MAL ID found for anime reviews lookup:', { itemId: item.id, itemName: item.name || item.title });
                 } else {
                     // MAL reviews
                     const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}/reviews`);
@@ -9360,7 +9360,7 @@ class MediaTracker {
             } else if (item.type === 'games') {
                 // Get Steam reviews
                 if (!item.externalApiId) {
-                    console.warn('âš ï¸ No externalApiId for game reviews:', item.name || item.title);
+                    console.warn('⚠️ No externalApiId for game reviews:', item.name || item.title);
                     section.style.display = 'none';
                     return;
                 }
@@ -9368,9 +9368,9 @@ class MediaTracker {
                     const response = await apiFetch(`${API_URL}/api/steam-reviews/${item.externalApiId}`);
                     if (response.ok) {
                         const data = await response.json();
-                        console.log('ðŸŽ® Steam reviews data:', data);
+                        console.log('🎮 Steam reviews data:', data);
                         reviews = (data.reviews || []).slice(0, 5).map(review => {
-                            const recommendation = review.voted_up ? 'ðŸ‘ Recommended' : 'ðŸ‘Ž Not Recommended';
+                            const recommendation = review.voted_up ? '👍 Recommended' : '👎 Not Recommended';
                             const authorName = this.getDisplayReviewAuthor(review.author, 'Steam User');
                             return {
                                 author: `${authorName} - ${recommendation}`,
@@ -9378,14 +9378,14 @@ class MediaTracker {
                             };
                         });
                     } else {
-                        console.warn('âŒ Failed to fetch Steam reviews:', response.status);
+                        console.warn('❌ Failed to fetch Steam reviews:', response.status);
                     }
                 } catch (err) {
-                    console.error('âŒ Error fetching Steam reviews:', err);
+                    console.error('❌ Error fetching Steam reviews:', err);
                 }
             }
 
-            console.log('ðŸ“ Reviews for', item.type, ':', reviews.length, 'reviews');
+            console.log('📝 Reviews for', item.type, ':', reviews.length, 'reviews');
 
             if (reviews.length > 0) {
                 container.innerHTML = reviews.map(review => {
@@ -9424,7 +9424,7 @@ class MediaTracker {
             if (item.type === 'anime') {
                 const malId = this.getAnimeMalId(item);
                 if (!malId) {
-                    console.warn('â„¹ï¸ No MAL ID found for anime info lookup:', { itemId: item.id, itemName: item.name || item.title });
+                    console.warn('ℹ️ No MAL ID found for anime info lookup:', { itemId: item.id, itemName: item.name || item.title });
                 } else {
                     // Fetch full anime details from MAL
                     const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}/full`);
@@ -9514,12 +9514,12 @@ class MediaTracker {
                                     </div>
                                 `).join('');
                         } else {
-                            console.warn('âŒ Failed to fetch Steam game data:', response.status);
+                            console.warn('❌ Failed to fetch Steam game data:', response.status);
                             // Fallback to item data
                             infoHTML = buildGamesInfoFromItem(item);
                         }
                     } catch (err) {
-                        console.error('âŒ Error fetching Steam game info:', err);
+                        console.error('❌ Error fetching Steam game info:', err);
                         // Fallback to item data
                         infoHTML = buildGamesInfoFromItem(item);
                     }
@@ -9956,7 +9956,7 @@ class MediaTracker {
         // Set the score number
         scoreNumber.textContent = Math.round(score);
 
-        // Calculate the dash offset for the circle (283 is the circumference for r=45: 2Ï€ Ã— 45 â‰ˆ 283)
+        // Calculate the dash offset for the circle (283 is the circumference for r=45: 2π × 45 ≈ 283)
         const circumference = 283;
         const offset = circumference - (score / 100) * circumference;
         circleFill.style.strokeDashoffset = offset;
@@ -11904,7 +11904,7 @@ class MediaTracker {
     toggleCollectionsInLibrary() {
         this.showCollectionsInLibrary = !this.showCollectionsInLibrary;
         try {
-            // Collections toggle state managed in server only
+            // Collections toggle state managed in GitHub only
         } catch (storageError) {
             console.warn('Failed to persist collections toggle preference:', storageError);
         }
@@ -11915,7 +11915,7 @@ class MediaTracker {
     toggleWatchlistView() {
         this.showWatchlistInLibrary = !this.showWatchlistInLibrary;
         try {
-            // Watchlist toggle state managed in server only
+            // Watchlist toggle state managed in GitHub only
         } catch (storageError) {
             console.warn('Failed to persist watchlist toggle preference:', storageError);
         }
@@ -11971,7 +11971,7 @@ class MediaTracker {
         }
     }
 
-    // âœ… Save (add or edit) + persist to DB
+    // ✅ Save (add or edit) + persist to DB
     async saveItem() {
         const itemType = this.currentTab;
         const isActor = itemType === 'actors';
@@ -12003,7 +12003,7 @@ class MediaTracker {
         };
 
         // Debug logging for Studio/Developer/DirectorCreator
-        console.log('ðŸ’¾ Saving item - Form values:', {
+        console.log('💾 Saving item - Form values:', {
             currentTab: this.currentTab,
             studio: item.studio,
             developer: item.developer,
@@ -12037,14 +12037,14 @@ class MediaTracker {
 
         // If ID is missing but name is provided, try to find collection by name
         if (!selectedCollectionId && selectedCollectionName) {
-            console.log(`ðŸ” Collection ID not set, searching by name: "${selectedCollectionName}"`);
+            console.log(`🔍 Collection ID not set, searching by name: "${selectedCollectionName}"`);
             let foundCollection = this.collections.find(c =>
                 c.name && c.name.toLowerCase() === selectedCollectionName.toLowerCase()
             );
 
             // If not found in current list, reload collections from DB and try again
             if (!foundCollection) {
-                console.log(`âš ï¸ Collection not found in current list, reloading from DB...`);
+                console.log(`⚠️ Collection not found in current list, reloading from DB...`);
                 await this.loadCollectionsFromDB();
                 foundCollection = this.collections.find(c =>
                     c.name && c.name.toLowerCase() === selectedCollectionName.toLowerCase()
@@ -12053,20 +12053,20 @@ class MediaTracker {
 
             if (foundCollection) {
                 selectedCollectionId = foundCollection.id;
-                console.log(`âœ… Found collection by name: "${selectedCollectionName}" -> ID: ${selectedCollectionId}`);
+                console.log(`✅ Found collection by name: "${selectedCollectionName}" -> ID: ${selectedCollectionId}`);
                 // Update the hidden field for consistency
                 document.getElementById('itemCollection').value = selectedCollectionId;
             } else {
-                console.log(`âš ï¸ Collection "${selectedCollectionName}" not found. Will create it after saving item.`);
+                console.log(`⚠️ Collection "${selectedCollectionName}" not found. Will create it after saving item.`);
             }
         }
 
         if (selectedCollectionId) {
-            console.log(`ðŸ“ Form submitted with collection: ID="${selectedCollectionId}", Name="${selectedCollectionName}"`);
+            console.log(`📝 Form submitted with collection: ID="${selectedCollectionId}", Name="${selectedCollectionName}"`);
         } else if (selectedCollectionName) {
-            console.log(`ðŸ“ Form submitted with collection name but no ID: "${selectedCollectionName}"`);
+            console.log(`📝 Form submitted with collection name but no ID: "${selectedCollectionName}"`);
         } else {
-            console.log(`ðŸ“ Form submitted without collection selection`);
+            console.log(`📝 Form submitted without collection selection`);
         }
 
         // If this is a Spotify-sourced artist (robust detection), always try to fetch and persist TMDB biography
@@ -12246,14 +12246,14 @@ class MediaTracker {
                 console.error('Save failed:', errorText);
                 alert('Save failed: ' + errorText);
             }
-            console.log("âœ… Saved to server:", dbItem);
-            console.log("âœ… Saved Studio/Developer/DirectorCreator to DB:", {
+            console.log("✅ Saved to GitHub:", dbItem);
+            console.log("✅ Saved Studio/Developer/DirectorCreator to DB:", {
                 studio: dbItem.studio,
                 developer: dbItem.developer,
                 directorCreator: dbItem.directorCreator
             });
         } catch (err) {
-            console.error("âŒ Error saving to server:", err);
+            console.error("❌ Error saving to GitHub:", err);
         }
 
         // Reload from DB (source of truth), but DO NOT wipe UI if empty
@@ -12264,8 +12264,8 @@ class MediaTracker {
 
         // Add item to collection if selected
         if (selectedCollectionId) {
-            console.log(`ðŸ” Looking for collection with ID: ${selectedCollectionId}`);
-            console.log(`ðŸ” Current collections before reload:`, this.collections.map(c => ({ id: c.id, name: c.name, itemCount: c.itemIds?.length || 0 })));
+            console.log(`🔍 Looking for collection with ID: ${selectedCollectionId}`);
+            console.log(`🔍 Current collections before reload:`, this.collections.map(c => ({ id: c.id, name: c.name, itemCount: c.itemIds?.length || 0 })));
 
             // Find the actual saved item from the database (might have different ID)
             let savedItemId = item.id;
@@ -12277,9 +12277,9 @@ class MediaTracker {
                 );
                 if (savedItem) {
                     savedItemId = savedItem.id;
-                    console.log(`âœ… Found saved item with ID: ${savedItemId} (original: ${item.id})`);
+                    console.log(`✅ Found saved item with ID: ${savedItemId} (original: ${item.id})`);
                 } else {
-                    console.log(`âš ï¸ Could not find saved item, using original ID: ${item.id}`);
+                    console.log(`⚠️ Could not find saved item, using original ID: ${item.id}`);
                 }
             }
 
@@ -12289,10 +12289,10 @@ class MediaTracker {
 
                 // If not found, reload collections and try again
                 if (!collectionToAddTo) {
-                    console.log(`âš ï¸ Collection not found in current list, reloading from DB...`);
+                    console.log(`⚠️ Collection not found in current list, reloading from DB...`);
                     await this.loadCollectionsFromDB();
                     collectionToAddTo = this.collections.find(c => c.id === selectedCollectionId);
-                    console.log(`ðŸ” Collections after reload:`, this.collections.map(c => ({ id: c.id, name: c.name, itemCount: c.itemIds?.length || 0 })));
+                    console.log(`🔍 Collections after reload:`, this.collections.map(c => ({ id: c.id, name: c.name, itemCount: c.itemIds?.length || 0 })));
                 }
 
                 if (collectionToAddTo) {
@@ -12301,23 +12301,23 @@ class MediaTracker {
                     }
                     if (!collectionToAddTo.itemIds.includes(savedItemId)) {
                         collectionToAddTo.itemIds.push(savedItemId);
-                        console.log(`âœ… Adding item ${savedItemId} to collection "${collectionToAddTo.name}" (now has ${collectionToAddTo.itemIds.length} items)`);
+                        console.log(`✅ Adding item ${savedItemId} to collection "${collectionToAddTo.name}" (now has ${collectionToAddTo.itemIds.length} items)`);
                     } else {
-                        console.log(`â„¹ï¸ Item ${savedItemId} already in collection "${collectionToAddTo.name}"`);
+                        console.log(`ℹ️ Item ${savedItemId} already in collection "${collectionToAddTo.name}"`);
                     }
-                    // Save collections to server
+                    // Save collections to GitHub
                     await this.saveCollectionToDB(collectionToAddTo);
-                    console.log(`âœ… Saved collection "${collectionToAddTo.name}" to database`);
+                    console.log(`✅ Saved collection "${collectionToAddTo.name}" to database`);
                 } else {
-                    console.error(`âŒ Collection with ID ${selectedCollectionId} not found after reload. Available collection IDs:`, this.collections.map(c => c.id));
-                    console.error(`âŒ Collection name from form:`, document.getElementById('itemCollectionSearch')?.value);
+                    console.error(`❌ Collection with ID ${selectedCollectionId} not found after reload. Available collection IDs:`, this.collections.map(c => c.id));
+                    console.error(`❌ Collection name from form:`, document.getElementById('itemCollectionSearch')?.value);
                 }
             } else {
-                console.error(`âŒ Cannot add to collection: savedItemId is invalid`);
+                console.error(`❌ Cannot add to collection: savedItemId is invalid`);
             }
         } else if (selectedCollectionName) {
             // Collection name provided but not found - create it
-            console.log(`ðŸ“ Creating new collection "${selectedCollectionName}" and adding item to it`);
+            console.log(`📝 Creating new collection "${selectedCollectionName}" and adding item to it`);
             await this.createCollectionFromForm(selectedCollectionName);
 
             // Reload collections to get the newly created one
@@ -12347,13 +12347,13 @@ class MediaTracker {
                     }
                     if (!newCollection.itemIds.includes(savedItemId)) {
                         newCollection.itemIds.push(savedItemId);
-                        console.log(`âœ… Added item ${savedItemId} to newly created collection "${newCollection.name}"`);
+                        console.log(`✅ Added item ${savedItemId} to newly created collection "${newCollection.name}"`);
                     }
                     await this.saveCollectionToDB(newCollection);
                 }
             }
         } else {
-            console.log(`â„¹ï¸ No collection selected for this item`);
+            console.log(`ℹ️ No collection selected for this item`);
         }
 
         // Auto-match collections by name for API items
@@ -12436,14 +12436,14 @@ class MediaTracker {
                                 linkedMovies: updatedLinkedMovies
                             })
                         });
-                        console.log(`âœ… Auto-linked ${movieItem.name} to actor ${actor.name}`);
+                        console.log(`✅ Auto-linked ${movieItem.name} to actor ${actor.name}`);
                     } catch (err) {
-                        console.error(`âŒ Error updating linked movies for actor ${actor.name}:`, err);
+                        console.error(`❌ Error updating linked movies for actor ${actor.name}:`, err);
                     }
                 }
             }
         } catch (error) {
-            console.error('âŒ Error auto-linking actors to movie:', error);
+            console.error('❌ Error auto-linking actors to movie:', error);
         }
     }
 
@@ -12519,16 +12519,16 @@ class MediaTracker {
                         linkedMovies: updatedLinkedMoviesStr
                     })
                 });
-                console.log(`âœ… Auto-linked ${moviesInLibrary.length} movies/TV to actor ${actorItem.name}`);
+                console.log(`✅ Auto-linked ${moviesInLibrary.length} movies/TV to actor ${actorItem.name}`);
             } catch (err) {
-                console.error(`âŒ Error updating linked movies for actor ${actorItem.name}:`, err);
+                console.error(`❌ Error updating linked movies for actor ${actorItem.name}:`, err);
             }
         } catch (error) {
-            console.error('âŒ Error auto-linking movies to actor:', error);
+            console.error('❌ Error auto-linking movies to actor:', error);
         }
     }
 
-    // Load all items from DB â†’ normalize into UI model
+    // Load all items from DB → normalize into UI model
     async loadItemsFromDB() {
         try {
             const res = await apiFetch(`${API_URL}/list`);
@@ -12537,8 +12537,8 @@ class MediaTracker {
 
             // Debug: Log what the database returns for the first row
             if (data && data.length > 0) {
-                console.log('ðŸ” Database row keys:', Object.keys(data[0]));
-                console.log('ðŸ” Sample row data:', data[0]);
+                console.log('🔍 Database row keys:', Object.keys(data[0]));
+                console.log('🔍 Sample row data:', data[0]);
             }
 
             const mapped = (Array.isArray(data) ? data : []).map(row => {
@@ -12605,19 +12605,19 @@ class MediaTracker {
                 };
             });
 
-            // ðŸ”’ Only replace if DB returned something; otherwise keep current UI list
+            // 🔒 Only replace if DB returned something; otherwise keep current UI list
             if (mapped.length > 0) {
                 this.data.items = mapped;
             } else {
                 console.warn("DB returned empty; keeping current UI items.");
             }
 
-            console.log("ðŸ“¦ Loaded items from server:", mapped);
+            console.log("📦 Loaded items from GitHub:", mapped);
             // Debug: Check if Studio/Developer/DirectorCreator are being loaded
             if (mapped.length > 0) {
                 const sampleItem = mapped.find(i => i.type === 'tv' || i.type === 'movies') || mapped[0];
                 if (sampleItem) {
-                    console.log("ðŸ“¦ Sample item loaded from DB:", {
+                    console.log("📦 Sample item loaded from DB:", {
                         name: sampleItem.name,
                         type: sampleItem.type,
                         studio: sampleItem.studio || '(empty)',
@@ -12632,7 +12632,7 @@ class MediaTracker {
             }
             return mapped;
         } catch (err) {
-            console.error("âŒ Error loading items from DB:", err);
+            console.error("❌ Error loading items from DB:", err);
             return [];
         }
     }
@@ -12772,9 +12772,9 @@ class MediaTracker {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ ids: selectedItemIds })
                 });
-                console.log("ðŸ—‘ï¸ Deleted items from server:", selectedItemIds);
+                console.log("🗑️ Deleted items from GitHub:", selectedItemIds);
             } catch (err) {
-                console.error("âŒ Error deleting items from server:", err);
+                console.error("❌ Error deleting items from GitHub:", err);
             }
         }
 
@@ -12786,9 +12786,9 @@ class MediaTracker {
             for (const collectionId of selectedCollectionIds) {
                 try {
                     await this.deleteCollectionFromDB(collectionId);
-                    console.log("ðŸ—‘ï¸ Deleted collection from server:", collectionId);
+                    console.log("🗑️ Deleted collection from GitHub:", collectionId);
                 } catch (err) {
-                    console.error("âŒ Error deleting collection from server:", err);
+                    console.error("❌ Error deleting collection from GitHub:", err);
                 }
             }
         }
@@ -12845,12 +12845,12 @@ class MediaTracker {
                 });
 
                 if (!resp.ok) {
-                    console.error("âŒ Failed to save rating:", await resp.text());
+                    console.error("❌ Failed to save rating:", await resp.text());
                 } else {
-                    console.log("âœ… Rating saved:", normalized);
+                    console.log("✅ Rating saved:", normalized);
                 }
             } catch (err) {
-                console.error("âŒ Error saving rating to DB:", err);
+                console.error("❌ Error saving rating to DB:", err);
             }
         }
     }
@@ -13339,7 +13339,7 @@ class MediaTracker {
                     /\bskins?\b/i,
                     /\bcosmetic\b/i,
                     // Non-English languages (exclude localized versions that aren't the main game)
-                    /\b(?:french|franÃ§ais|german|deutsch|spanish|espaÃ±ol|italian|italiano|portuguese|portuguÃªs|russian|Ñ€ÑƒÑÑÐºÐ¸Ð¹|japanese|æ—¥æœ¬èªž|chinese|ä¸­æ–‡|korean|í•œêµ­ì–´|polish|polski|dutch|nederlands|turkish|tÃ¼rkÃ§e|arabic|Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©|hebrew|×¢×‘×¨×™×ª|thai|à¹„à¸—à¸¢|vietnamese|tiáº¿ng viá»‡t|indonesian|indonesia|hindi|à¤¹à¤¿à¤¨à¥à¤¦à¥€|greek|ÎµÎ»Î»Î·Î½Î¹ÎºÎ¬|czech|ÄeÅ¡tina|romanian|romÃ¢nÄƒ|hungarian|magyar|swedish|svenska|norwegian|norsk|danish|dansk|finnish|suomi)\s+(?:version|edition|language|lang)\b/i
+                    /\b(?:french|français|german|deutsch|spanish|español|italian|italiano|portuguese|português|russian|русский|japanese|日本語|chinese|中文|korean|한국어|polish|polski|dutch|nederlands|turkish|türkçe|arabic|العربية|hebrew|עברית|thai|ไทย|vietnamese|tiếng việt|indonesian|indonesia|hindi|हिन्दी|greek|ελληνικά|czech|čeština|romanian|română|hungarian|magyar|swedish|svenska|norwegian|norsk|danish|dansk|finnish|suomi)\s+(?:version|edition|language|lang)\b/i
                 ];
 
                 // Check if title matches any exclusion pattern
@@ -13485,7 +13485,7 @@ class MediaTracker {
             }
             return await response.json();
         } catch (error) {
-            console.warn(`âš ï¸ Failed to fetch detailed metadata for ${category} ${apiId}:`, error.message);
+            console.warn(`⚠️ Failed to fetch detailed metadata for ${category} ${apiId}:`, error.message);
             return null;
         }
     }
@@ -13582,7 +13582,7 @@ class MediaTracker {
             const transientId = apiId ? String(apiId) : '';
             this.currentItem = { type: this.currentTab, externalApiId: transientId, name: document.getElementById('itemName').value };
         } catch (e) {
-            // If anything goes wrong setting currentItem, silently ignore â€“ existing behaviour will continue
+            // If anything goes wrong setting currentItem, silently ignore – existing behaviour will continue
             console.warn('Could not set transient currentItem after selection:', e);
         }
 
@@ -14222,7 +14222,7 @@ class MediaTracker {
                         if (item) {
                             item.studio = studioValue.trim();
                         }
-                        console.log('âœ… Updated studio in database:', studioValue.trim());
+                        console.log('✅ Updated studio in database:', studioValue.trim());
                     }
                 } catch (updateError) {
                     console.error('Error updating item in database:', updateError);
@@ -14273,29 +14273,29 @@ class MediaTracker {
                                 : gameData.developed_by;
                             console.log('Using gameData.developed_by:', developerValue);
                         } else {
-                            console.log('âš ï¸ No developer information found in gameData');
+                            console.log('⚠️ No developer information found in gameData');
                         }
 
                         if (developerValue && developerValue.trim() && developerField) {
                             developerField.value = developerValue.trim();
-                            console.log('âœ… Populated developer field:', developerValue.trim());
+                            console.log('✅ Populated developer field:', developerValue.trim());
                         } else {
-                            console.log('âš ï¸ Developer field not populated. Value:', developerValue, 'Field:', developerField);
+                            console.log('⚠️ Developer field not populated. Value:', developerValue, 'Field:', developerField);
                         }
                     } else {
-                        console.error('âš ï¸ Response is not JSON. Content-Type:', contentType);
+                        console.error('⚠️ Response is not JSON. Content-Type:', contentType);
                         const text = await serverResponse.text();
                         console.log('Response text:', text.substring(0, 200));
                     }
                 } else {
                     const errorText = await serverResponse.text();
-                    console.error('âš ï¸ Server response not OK:', serverResponse.status, errorText);
+                    console.error('⚠️ Server response not OK:', serverResponse.status, errorText);
                 }
             } catch (serverError) {
-                console.error('âŒ Error fetching developer info:', serverError);
+                console.error('❌ Error fetching developer info:', serverError);
             }
         } catch (error) {
-            console.error('âŒ Error in fetchGameDeveloper:', error);
+            console.error('❌ Error in fetchGameDeveloper:', error);
         }
     }
 
@@ -14351,7 +14351,7 @@ class MediaTracker {
                         if (item) {
                             item.developer = developerValue.trim();
                         }
-                        console.log('âœ… Updated developer in database:', developerValue.trim());
+                        console.log('✅ Updated developer in database:', developerValue.trim());
                     }
                 } catch (updateError) {
                     console.error('Error updating item in database:', updateError);
@@ -14499,7 +14499,7 @@ class MediaTracker {
                         if (item) {
                             item.directorCreator = directorCreatorValue.trim();
                         }
-                        console.log('âœ… Updated directorCreator in database:', directorCreatorValue.trim());
+                        console.log('✅ Updated directorCreator in database:', directorCreatorValue.trim());
                     }
                 } catch (updateError) {
                     console.error('Error updating item in database:', updateError);
@@ -14831,7 +14831,7 @@ class MediaTracker {
                     <img src="${poster || this.PLACEHOLDER_IMAGE}" alt="${title}" />
                     <div class="linked-movie-item-info">
                         <h5>${title}</h5>
-                        <p>${year ? `${year} â€¢ ` : ''}${category}</p>
+                        <p>${year ? `${year} • ` : ''}${category}</p>
                     </div>
                 </div>
             `;
@@ -14884,7 +14884,7 @@ class MediaTracker {
         const html = this.selectedLinkedMovies.map((movie, idx) => `
             <div class="selected-movie-chip">
                 <span>${movie.title} (${movie.category})</span>
-                <button type="button" onclick="tracker.removeLinkedMovie(${idx})">Ã—</button>
+                <button type="button" onclick="tracker.removeLinkedMovie(${idx})">×</button>
             </div>
         `).join('');
 
@@ -15132,11 +15132,11 @@ class MediaTracker {
             else category = 'movie';
 
             const searchUrl = `${API_URL}/api/search?query=${encodeURIComponent(itemName)}&category=${category}&service=tmdb`;
-            console.log(`ðŸ” Searching TMDB for "${itemName}" (${category}): ${searchUrl}`);
+            console.log(`🔍 Searching TMDB for "${itemName}" (${category}): ${searchUrl}`);
 
             const response = await fetch(searchUrl);
             if (!response.ok) {
-                console.warn(`âŒ TMDB search failed: ${response.status}`);
+                console.warn(`❌ TMDB search failed: ${response.status}`);
                 return null;
             }
 
@@ -15144,7 +15144,7 @@ class MediaTracker {
             const results = searchData.results || [];
 
             if (results.length === 0) {
-                console.log(`â„¹ï¸ No TMDB results found for "${itemName}"`);
+                console.log(`ℹ️ No TMDB results found for "${itemName}"`);
                 return null;
             }
 
@@ -15165,10 +15165,10 @@ class MediaTracker {
             }
 
             const foundId = matchedItem.id;
-            console.log(`âœ… Found TMDB ID for "${itemName}": ${foundId} (matched: "${matchedItem.title || matchedItem.name}")`);
+            console.log(`✅ Found TMDB ID for "${itemName}": ${foundId} (matched: "${matchedItem.title || matchedItem.name}")`);
             return foundId;
         } catch (error) {
-            console.error(`âŒ Error searching TMDB for "${itemName}":`, error);
+            console.error(`❌ Error searching TMDB for "${itemName}":`, error);
             return null;
         }
     }
@@ -15186,8 +15186,8 @@ class MediaTracker {
 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log(`âœ… Fanart.tv data for ${item.name} (ID: ${apiId}):`, data);
-                    console.log(`ðŸ“‹ Data keys:`, Object.keys(data));
+                    console.log(`✅ Fanart.tv data for ${item.name} (ID: ${apiId}):`, data);
+                    console.log(`📋 Data keys:`, Object.keys(data));
 
                     let posters = [];
                     let banners = [];
@@ -15196,11 +15196,11 @@ class MediaTracker {
                     if (imageType === 'poster') {
                         const posterKey = type === 'movie' ? 'movieposter' : 'tvposter';
                         posters = data[posterKey] || data.posters || [];
-                        console.log(`âœ… Found ${posters.length} posters in ${posterKey} key`);
+                        console.log(`✅ Found ${posters.length} posters in ${posterKey} key`);
                     } else {
                         const bannerKey = type === 'movie' ? 'moviebanner' : 'tvbanner';
                         banners = data[bannerKey] || data.banners || [];
-                        console.log(`âœ… Found ${banners.length} banners in ${bannerKey} key`);
+                        console.log(`✅ Found ${banners.length} banners in ${bannerKey} key`);
                     }
 
                     // If we found images, use them
@@ -15220,7 +15220,7 @@ class MediaTracker {
                             backdrops: banners
                         };
 
-                        console.log(`âœ… Displaying ${imageType === 'poster' ? posters.length : banners.length} ${imageType}s from fanart.tv`);
+                        console.log(`✅ Displaying ${imageType === 'poster' ? posters.length : banners.length} ${imageType}s from fanart.tv`);
                         this.displayImagesInModal();
                         return;
                     }
@@ -15229,21 +15229,21 @@ class MediaTracker {
 
             // If ID search failed or returned no results, try searching by name
             if (!triedSearch) {
-                console.log(`âš ï¸ No results with ID ${apiId}, trying search by name for "${item.name}"`);
+                console.log(`⚠️ No results with ID ${apiId}, trying search by name for "${item.name}"`);
                 try {
                     const foundId = await this.searchTMDBByName(item.name, item.type);
 
                     if (foundId) {
                         triedSearch = true;
                         apiId = foundId;
-                        console.log(`ðŸ”„ Retrying fanart.tv with found ID: ${apiId}`);
+                        console.log(`🔄 Retrying fanart.tv with found ID: ${apiId}`);
 
                         const url = `${API_URL}/api/fanarttv?type=${type}&id=${apiId}`;
                         const response = await fetch(url);
 
                         if (response.ok) {
                             const data = await response.json();
-                            console.log(`âœ… Fanart.tv data for ${item.name} (searched ID: ${apiId}):`, data);
+                            console.log(`✅ Fanart.tv data for ${item.name} (searched ID: ${apiId}):`, data);
 
                             let posters = [];
                             let banners = [];
@@ -15271,21 +15271,21 @@ class MediaTracker {
                                     backdrops: banners
                                 };
 
-                                console.log(`âœ… Displaying ${imageType === 'poster' ? posters.length : banners.length} ${imageType}s from fanart.tv (via name search)`);
+                                console.log(`✅ Displaying ${imageType === 'poster' ? posters.length : banners.length} ${imageType}s from fanart.tv (via name search)`);
                                 this.displayImagesInModal();
                                 return;
                             }
                         }
                     }
                 } catch (searchError) {
-                    console.warn(`âš ï¸ Name search failed for "${item.name}":`, searchError);
+                    console.warn(`⚠️ Name search failed for "${item.name}":`, searchError);
                     // Continue to show error message
                 }
             }
 
             // No results found - try TMDB as fallback
             if (item.externalApiId) {
-                console.log(`âš ï¸ No results from fanart.tv, trying TMDB as fallback...`);
+                console.log(`⚠️ No results from fanart.tv, trying TMDB as fallback...`);
                 try {
                     const category = item.type === 'tv' ? 'tv' : 'movie';
                     const url = `${API_URL}/api/images?category=${category}&id=${item.externalApiId}`;
@@ -15315,7 +15315,7 @@ class MediaTracker {
                         }
                     }
                 } catch (tmdbError) {
-                    console.warn(`âš ï¸ TMDB fallback failed:`, tmdbError);
+                    console.warn(`⚠️ TMDB fallback failed:`, tmdbError);
                 }
             }
 
@@ -15515,7 +15515,7 @@ class MediaTracker {
             }
 
             if (!displayUrl) {
-                console.warn(`âš ï¸ No valid URL found for image:`, image);
+                console.warn(`⚠️ No valid URL found for image:`, image);
                 return '';
             }
 
@@ -15825,7 +15825,7 @@ class MediaTracker {
                 this.collections[idx] = collection;
             }
 
-            // Save to server (server converts base64 to file path)
+            // Save to GitHub (server converts base64 to file path)
             await this.updateCollectionInDB(collection.id, { posterBase64: base64 });
 
             // Reload collections to get updated paths
@@ -16057,7 +16057,7 @@ class MediaTracker {
                 this.collections[idx] = collection;
             }
 
-            // Save to server (server converts base64 to file path)
+            // Save to GitHub (server converts base64 to file path)
             await this.updateCollectionInDB(collection.id, { posterBase64: base64 });
 
             // Reload collections to get updated paths
@@ -16179,13 +16179,13 @@ class MediaTracker {
         const itemsToProcess = itemsWithApiId.length > 0 ? itemsWithApiId : items;
 
         try {
-            console.log(`ðŸ” Fetching fanart.tv banners for ${items.length} items, type: ${type}`);
+            console.log(`🔍 Fetching fanart.tv banners for ${items.length} items, type: ${type}`);
 
             // Check if items have externalApiId
             const itemsWithoutApiId = items.filter(item => !item.externalApiId);
 
             if (itemsWithoutApiId.length > 0) {
-                console.warn(`âš ï¸ ${itemsWithoutApiId.length} items without externalApiId:`, itemsWithoutApiId.map(i => i.name));
+                console.warn(`⚠️ ${itemsWithoutApiId.length} items without externalApiId:`, itemsWithoutApiId.map(i => i.name));
             }
 
             const allBanners = [];
@@ -16201,20 +16201,20 @@ class MediaTracker {
 
                     // If no ID, search by name first
                     if (!apiId) {
-                        console.log(`âš ï¸ No externalApiId for "${item.name}", searching by name...`);
+                        console.log(`⚠️ No externalApiId for "${item.name}", searching by name...`);
                         try {
                             const foundId = await this.searchTMDBByName(item.name, type === 'movies' ? 'movies' : 'tv');
                             if (foundId) {
                                 apiId = foundId;
                                 triedSearch = true;
-                                console.log(`âœ… Found ID via name search: ${apiId}`);
+                                console.log(`✅ Found ID via name search: ${apiId}`);
                             } else {
-                                console.log(`âŒ Could not find TMDB ID for "${item.name}"`);
+                                console.log(`❌ Could not find TMDB ID for "${item.name}"`);
                                 failCount++;
                                 continue;
                             }
                         } catch (searchError) {
-                            console.warn(`âš ï¸ Name search failed for "${item.name}":`, searchError);
+                            console.warn(`⚠️ Name search failed for "${item.name}":`, searchError);
                             failCount++;
                             continue; // Skip this item if search fails
                         }
@@ -16222,13 +16222,13 @@ class MediaTracker {
 
                     // First try with ID (either existing or found via search)
                     const url = `${API_URL}/api/fanarttv?type=${type === 'movies' ? 'movie' : 'tv'}&id=${apiId}`;
-                    console.log(`ðŸ“¡ Fetching banners for "${item.name}" (${apiId}): ${url}`);
+                    console.log(`📡 Fetching banners for "${item.name}" (${apiId}): ${url}`);
 
                     const response = await fetch(url);
                     if (response.ok) {
                         const data = await response.json();
-                        console.log(`âœ… Received data for ${item.name}:`, data);
-                        console.log(`ðŸ“‹ Data keys:`, Object.keys(data));
+                        console.log(`✅ Received data for ${item.name}:`, data);
+                        console.log(`📋 Data keys:`, Object.keys(data));
 
                         // Check for banners (fanart.tv's "Banner" category - wide horizontal banners with logos/characters)
                         // The 'banners' key is the main "Banner" category, not backgrounds (backgrounds are in 'moviebackground'/'tvbackground')
@@ -16238,50 +16238,50 @@ class MediaTracker {
                         if (data.banners && Array.isArray(data.banners) && data.banners.length > 0) {
                             // Prioritize 'banners' key - this is the actual "Banner" category from fanart.tv
                             foundBanners = data.banners;
-                            console.log(`âœ… Found ${foundBanners.length} banners in 'banners' key (Banner category) for ${item.name}`);
+                            console.log(`✅ Found ${foundBanners.length} banners in 'banners' key (Banner category) for ${item.name}`);
                         } else if (data[bannerKey] && Array.isArray(data[bannerKey]) && data[bannerKey].length > 0) {
                             // Fall back to specific banner keys
                             foundBanners = data[bannerKey];
-                            console.log(`âœ… Found ${foundBanners.length} banners in ${bannerKey} key for ${item.name}`);
+                            console.log(`✅ Found ${foundBanners.length} banners in ${bannerKey} key for ${item.name}`);
                         } else {
-                            console.log(`â„¹ï¸ No banners found for ${item.name}. Available keys:`, Object.keys(data));
+                            console.log(`ℹ️ No banners found for ${item.name}. Available keys:`, Object.keys(data));
                         }
                     } else {
-                        console.warn(`âŒ API response not OK for ${item.name}: ${response.status} ${response.statusText}`);
+                        console.warn(`❌ API response not OK for ${item.name}: ${response.status} ${response.statusText}`);
                     }
 
                     // If no banners found with ID and we haven't searched yet, try searching by name
                     if (foundBanners.length === 0 && !triedSearch) {
-                        console.log(`âš ï¸ No banners with ID ${apiId}, trying search by name for "${item.name}"`);
+                        console.log(`⚠️ No banners with ID ${apiId}, trying search by name for "${item.name}"`);
                         try {
                             const foundId = await this.searchTMDBByName(item.name, type === 'movies' ? 'movies' : 'tv');
 
                             if (foundId && foundId !== apiId) {
                                 triedSearch = true;
                                 apiId = foundId;
-                                console.log(`ðŸ”„ Retrying fanart.tv with found ID: ${apiId}`);
+                                console.log(`🔄 Retrying fanart.tv with found ID: ${apiId}`);
 
                                 const retryUrl = `${API_URL}/api/fanarttv?type=${type === 'movies' ? 'movie' : 'tv'}&id=${apiId}`;
                                 const retryResponse = await fetch(retryUrl);
 
                                 if (retryResponse.ok) {
                                     const retryData = await retryResponse.json();
-                                    console.log(`âœ… Received data for ${item.name} (searched ID: ${apiId}):`, retryData);
+                                    console.log(`✅ Received data for ${item.name} (searched ID: ${apiId}):`, retryData);
 
                                     const bannerKey = type === 'movies' ? 'moviebanner' : 'tvbanner';
                                     if (retryData.banners && Array.isArray(retryData.banners) && retryData.banners.length > 0) {
                                         // Prioritize 'banners' key - this is the actual "Banner" category from fanart.tv
                                         foundBanners = retryData.banners;
-                                        console.log(`âœ… Found ${foundBanners.length} banners in 'banners' key (Banner category) with searched ID`);
+                                        console.log(`✅ Found ${foundBanners.length} banners in 'banners' key (Banner category) with searched ID`);
                                     } else if (retryData[bannerKey] && Array.isArray(retryData[bannerKey]) && retryData[bannerKey].length > 0) {
                                         // Fall back to specific banner keys
                                         foundBanners = retryData[bannerKey];
-                                        console.log(`âœ… Found ${foundBanners.length} banners in ${bannerKey} key with searched ID`);
+                                        console.log(`✅ Found ${foundBanners.length} banners in ${bannerKey} key with searched ID`);
                                     }
                                 }
                             }
                         } catch (searchError) {
-                            console.warn(`âš ï¸ Name search failed for "${item.name}", skipping fallback:`, searchError);
+                            console.warn(`⚠️ Name search failed for "${item.name}", skipping fallback:`, searchError);
                             // Continue without name search - don't break the loop
                         }
                     }
@@ -16292,25 +16292,25 @@ class MediaTracker {
                     }));
 
                     if (foundBanners.length > 0) {
-                        console.log(`âœ… Found ${foundBanners.length} banners for ${item.name}${triedSearch ? ' (via name search)' : ''}`);
+                        console.log(`✅ Found ${foundBanners.length} banners for ${item.name}${triedSearch ? ' (via name search)' : ''}`);
                         allBanners.push(...foundBanners);
                         successCount++;
                     } else {
-                        console.log(`â„¹ï¸ No banners found for ${item.name}${triedSearch ? ' (searched by name)' : ''}`);
+                        console.log(`ℹ️ No banners found for ${item.name}${triedSearch ? ' (searched by name)' : ''}`);
                         failCount++;
                     }
                 } catch (e) {
-                    console.error(`âŒ Error fetching fanart.tv banners for ${item.name}:`, e);
+                    console.error(`❌ Error fetching fanart.tv banners for ${item.name}:`, e);
                     failCount++;
                 }
             }
 
-            console.log(`ðŸ“Š Banner fetch summary: ${successCount} successful, ${failCount} failed, ${allBanners.length} total banners`);
+            console.log(`📊 Banner fetch summary: ${successCount} successful, ${failCount} failed, ${allBanners.length} total banners`);
 
             // Only show banners if we found actual fanart.tv banners (Banner category)
             // Don't fall back to TMDB backdrops as they are backgrounds, not banners
             if (allBanners.length === 0) {
-                console.log(`âš ï¸ No banners found on fanart.tv for any items in this collection`);
+                console.log(`⚠️ No banners found on fanart.tv for any items in this collection`);
                 document.getElementById('imageSelectionGrid').innerHTML = '<p>No banners found on fanart.tv for items in this collection. Banners (from the "Banner" category) are different from backgrounds.</p>';
                 return;
             }
@@ -16322,7 +16322,7 @@ class MediaTracker {
 
             this.displayCollectionBannerImages();
         } catch (error) {
-            console.error('âŒ Error fetching fanart.tv banners:', error);
+            console.error('❌ Error fetching fanart.tv banners:', error);
             document.getElementById('imageSelectionGrid').innerHTML = '<p style="color: #ff6666;">Error loading wide banners from fanart.tv. Check console for details.</p>';
         }
     }
@@ -16330,31 +16330,31 @@ class MediaTracker {
     // Fetch banners from TMDB for movies/TV collection (fallback when fanart.tv fails)
     async fetchCollectionBannersFromTMDB(items, type) {
         try {
-            console.log(`ðŸ”„ Fetching TMDB backdrops (banners) for ${items.length} items, type: ${type}`);
+            console.log(`🔄 Fetching TMDB backdrops (banners) for ${items.length} items, type: ${type}`);
             const allBanners = [];
 
             // Fetch backdrops (banners) for all movies/TV in the collection
             for (const item of items) {
                 if (!item.externalApiId) {
-                    console.log(`âš ï¸ Skipping ${item.name} - no externalApiId`);
+                    console.log(`⚠️ Skipping ${item.name} - no externalApiId`);
                     continue;
                 }
 
                 try {
                     const category = type === 'tv' ? 'tv' : 'movie';
                     const url = `${API_URL}/api/images?category=${category}&id=${item.externalApiId}`;
-                    console.log(`ðŸ“¡ Fetching TMDB backdrops for "${item.name}" (${item.externalApiId}): ${url}`);
+                    console.log(`📡 Fetching TMDB backdrops for "${item.name}" (${item.externalApiId}): ${url}`);
 
                     const response = await fetch(url);
                     if (!response.ok) {
-                        console.warn(`âŒ TMDB API response not OK for ${item.name}: ${response.status}`);
+                        console.warn(`❌ TMDB API response not OK for ${item.name}: ${response.status}`);
                         continue;
                     }
 
                     const data = await response.json();
-                    console.log(`âœ… TMDB data for ${item.name}:`, data);
+                    console.log(`✅ TMDB data for ${item.name}:`, data);
                     const backdrops = data.backdrops || [];
-                    console.log(`âœ… Found ${backdrops.length} backdrops for ${item.name}`);
+                    console.log(`✅ Found ${backdrops.length} backdrops for ${item.name}`);
 
                     const banners = backdrops.map(banner => ({
                         ...banner,
@@ -16363,11 +16363,11 @@ class MediaTracker {
                     }));
                     allBanners.push(...banners);
                 } catch (e) {
-                    console.error(`âŒ Error fetching TMDB banners for ${item.name}:`, e);
+                    console.error(`❌ Error fetching TMDB banners for ${item.name}:`, e);
                 }
             }
 
-            console.log(`ðŸ“Š TMDB banner fetch summary: ${allBanners.length} total banners found`);
+            console.log(`📊 TMDB banner fetch summary: ${allBanners.length} total banners found`);
 
             if (allBanners.length === 0) {
                 document.getElementById('imageSelectionGrid').innerHTML = '<p>No banners found on TMDB or fanart.tv for items in this collection.</p>';
@@ -16379,10 +16379,10 @@ class MediaTracker {
                 backdrops: allBanners
             };
 
-            console.log(`âœ… Displaying ${allBanners.length} banners from TMDB`);
+            console.log(`✅ Displaying ${allBanners.length} banners from TMDB`);
             this.displayCollectionBannerImages();
         } catch (error) {
-            console.error('âŒ Error fetching TMDB banners:', error);
+            console.error('❌ Error fetching TMDB banners:', error);
             document.getElementById('imageSelectionGrid').innerHTML = '<p style="color: #ff6666;">Error loading banners from TMDB. Check console for details.</p>';
         }
     }
@@ -16413,7 +16413,7 @@ class MediaTracker {
             }
 
             if (!displayUrl) {
-                console.warn(`âš ï¸ No valid URL found for banner image:`, image);
+                console.warn(`⚠️ No valid URL found for banner image:`, image);
                 return '';
             }
 
@@ -16464,7 +16464,7 @@ class MediaTracker {
                 throw new Error('Invalid image data received');
             }
 
-            // Save to server (server converts base64 to file path)
+            // Save to GitHub (server converts base64 to file path)
             const response = await apiFetch(`${API_URL}/collections/${collection.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -16499,7 +16499,7 @@ class MediaTracker {
             this.closeImageSelector();
             alert('Collection banner updated successfully!');
         } catch (error) {
-            console.error('âŒ Error selecting collection banner:', error);
+            console.error('❌ Error selecting collection banner:', error);
             alert(`Failed to select banner: ${error.message}`);
         }
     }
@@ -16527,7 +16527,7 @@ class MediaTracker {
                 this.collections[idx] = collection;
             }
 
-            // Save to server
+            // Save to GitHub
             await this.updateCollectionInDB(collection.id, { bannerBase64: base64 });
 
             // If we're currently viewing this collection, refresh the view
@@ -16599,7 +16599,7 @@ class MediaTracker {
                     (w.id && w.id === item.id))
             );
             this.saveWatchlist(newWatchlist);
-            console.log('ðŸ“‹ Removed from watchlist:', item.name || item.title, '| Type:', itemType);
+            console.log('📋 Removed from watchlist:', item.name || item.title, '| Type:', itemType);
         } else {
             // Add to watchlist
             const watchlistItem = {
@@ -16613,7 +16613,7 @@ class MediaTracker {
             };
             watchlist.push(watchlistItem);
             this.saveWatchlist(watchlist);
-            console.log('ðŸ“‹ Added to watchlist:', item.name || item.title, '| Type:', itemType, '| Item:', watchlistItem);
+            console.log('📋 Added to watchlist:', item.name || item.title, '| Type:', itemType, '| Item:', watchlistItem);
         }
 
         // Update button state
