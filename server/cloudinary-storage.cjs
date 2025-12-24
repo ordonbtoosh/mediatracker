@@ -133,7 +133,10 @@ function getImageUrl(publicId, transformations = {}) {
  * @returns {Promise<{url: string, publicId: string}>}
  */
 async function uploadJsonData(data, publicId, folder = 'mediatracker/data') {
+    console.log(`[Cloudinary] uploadJsonData called: publicId=${publicId}, folder=${folder}`);
+
     if (!isConfigured()) {
+        console.error('[Cloudinary] uploadJsonData failed: not configured');
         throw new Error('Cloudinary not configured');
     }
 
@@ -143,6 +146,8 @@ async function uploadJsonData(data, publicId, folder = 'mediatracker/data') {
         const base64 = Buffer.from(jsonString).toString('base64');
         const dataUri = `data:application/json;base64,${base64}`;
 
+        console.log(`[Cloudinary] Uploading JSON (${jsonString.length} bytes) to folder: ${folder}, publicId: ${publicId}`);
+
         const result = await cloudinary.uploader.upload(dataUri, {
             folder: folder,
             public_id: publicId,
@@ -150,12 +155,16 @@ async function uploadJsonData(data, publicId, folder = 'mediatracker/data') {
             resource_type: 'raw'
         });
 
+        console.log(`[Cloudinary] ✅ Upload success! URL: ${result.secure_url}`);
+        console.log(`[Cloudinary] Full public_id: ${result.public_id}`);
+
         return {
             url: result.secure_url,
             publicId: result.public_id
         };
     } catch (error) {
-        console.error('[Cloudinary] JSON upload error:', error.message);
+        console.error('[Cloudinary] ❌ JSON upload error:', error.message);
+        console.error('[Cloudinary] Error details:', error);
         throw error;
     }
 }
