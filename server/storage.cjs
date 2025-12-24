@@ -90,8 +90,10 @@ function getDataRepoConfig() {
  */
 async function getFileContent(filePath) {
     if (storageProvider === 'cloudinary') {
-        const publicId = `mediatracker/data/${filePath.replace('.json', '')}`;
-        const content = await cloudinaryStorage.getJsonData(publicId);
+        // Convert path to Cloudinary public ID format
+        // e.g., 'settings.json' -> 'settings', 'media/index.json' -> 'media_index'
+        const publicId = filePath.replace('.json', '').replace(/\//g, '_');
+        const content = await cloudinaryStorage.getJsonData(`mediatracker/data/${publicId}`);
         return content ? { content, sha: null } : null;
     }
 
@@ -111,8 +113,11 @@ async function getFileContent(filePath) {
  */
 async function createOrUpdateFile(filePath, content, message = 'Update file', sha = null) {
     if (storageProvider === 'cloudinary') {
+        // Convert path to Cloudinary public ID format (same as getFileContent)
         const publicId = filePath.replace('.json', '').replace(/\//g, '_');
+        console.log(`[Storage] Saving to Cloudinary: ${publicId}`);
         const result = await cloudinaryStorage.uploadJsonData(content, publicId);
+        console.log(`[Storage] Saved successfully: ${result.url}`);
         return { url: result.url };
     }
 
@@ -131,8 +136,9 @@ async function createOrUpdateFile(filePath, content, message = 'Update file', sh
  */
 async function deleteFile(filePath, sha = null, message = 'Delete file') {
     if (storageProvider === 'cloudinary') {
-        const publicId = `mediatracker/data/${filePath.replace('.json', '')}`;
-        return await cloudinaryStorage.deleteJsonData(publicId);
+        // Convert path to Cloudinary public ID format (same as getFileContent)
+        const publicId = filePath.replace('.json', '').replace(/\//g, '_');
+        return await cloudinaryStorage.deleteJsonData(`mediatracker/data/${publicId}`);
     }
 
     // GitHub

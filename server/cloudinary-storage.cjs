@@ -171,11 +171,15 @@ async function getJsonData(publicId) {
     }
 
     try {
-        // Get the raw file URL
-        const url = cloudinary.url(publicId, {
+        // Get the raw file URL with cache-busting timestamp
+        const timestamp = Date.now();
+        const baseUrl = cloudinary.url(publicId, {
             resource_type: 'raw',
             secure: true
         });
+
+        // Add cache-busting query parameter
+        const url = `${baseUrl}?t=${timestamp}`;
 
         // Fetch the content
         const https = require('https');
@@ -186,11 +190,13 @@ async function getJsonData(publicId) {
 
             protocol.get(url, (res) => {
                 if (res.statusCode === 404) {
+                    console.log(`[Cloudinary] JSON not found: ${publicId}`);
                     resolve(null);
                     return;
                 }
 
                 if (res.statusCode !== 200) {
+                    console.error(`[Cloudinary] Failed to fetch JSON: ${res.statusCode} for ${publicId}`);
                     reject(new Error(`Failed to fetch JSON: ${res.statusCode}`));
                     return;
                 }
@@ -200,12 +206,16 @@ async function getJsonData(publicId) {
                 res.on('end', () => {
                     try {
                         const parsed = JSON.parse(data);
+                        console.log(`[Cloudinary] Successfully loaded: ${publicId}`);
                         resolve(parsed);
                     } catch (e) {
                         reject(new Error('Failed to parse JSON: ' + e.message));
                     }
                 });
-            }).on('error', reject);
+            }).on('error', (err) => {
+                console.error(`[Cloudinary] Request error for ${publicId}:`, err.message);
+                reject(err);
+            });
         });
     } catch (error) {
         console.error('[Cloudinary] JSON fetch error:', error.message);
