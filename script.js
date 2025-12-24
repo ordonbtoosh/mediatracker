@@ -15343,16 +15343,19 @@ class MediaTracker {
             const reloadedItem = this.data.items.find(i => i.id === item.id);
             if (reloadedItem) {
                 this.currentItem = reloadedItem;
-                // Update the displayed image to the new one from DB
+                const timestamp = Date.now();
+                // Update the displayed image to the new one from DB with cache busting
                 if (this.currentImageType === 'poster') {
                     const posterEl = document.getElementById('detailPoster');
                     if (posterEl && reloadedItem.posterBase64) {
-                        posterEl.src = this.getProxiedImageUrl(reloadedItem.posterBase64);
+                        const url = this.getProxiedImageUrl(reloadedItem.posterBase64);
+                        posterEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
                     }
                 } else {
                     const bannerEl = document.getElementById('bannerImage');
                     if (bannerEl && reloadedItem.bannerBase64) {
-                        bannerEl.src = this.getProxiedImageUrl(reloadedItem.bannerBase64);
+                        const url = this.getProxiedImageUrl(reloadedItem.bannerBase64);
+                        bannerEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
                     }
                 }
             }
@@ -15463,16 +15466,19 @@ class MediaTracker {
             const reloadedItem = this.data.items.find(i => i.id === item.id);
             if (reloadedItem) {
                 this.currentItem = reloadedItem;
-                // Update the displayed image to the new one from DB
+                const timestamp = Date.now();
+                // Update the displayed image to the new one from DB with cache busting
                 if (imageType === 'poster') {
                     const posterEl = document.getElementById('detailPoster');
                     if (posterEl && reloadedItem.posterBase64) {
-                        posterEl.src = this.getProxiedImageUrl(reloadedItem.posterBase64);
+                        const url = this.getProxiedImageUrl(reloadedItem.posterBase64);
+                        posterEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
                     }
                 } else {
                     const bannerEl = document.getElementById('bannerImage');
                     if (bannerEl && reloadedItem.bannerBase64) {
-                        bannerEl.src = this.getProxiedImageUrl(reloadedItem.bannerBase64);
+                        const url = this.getProxiedImageUrl(reloadedItem.bannerBase64);
+                        bannerEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
                     }
                 }
             }

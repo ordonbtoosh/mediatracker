@@ -1375,8 +1375,8 @@ app.get('/api/github-image', async (req, res) => {
           res.setHeader('Content-Type', proxyRes.headers['content-type']);
         }
 
-        // Add cache headers for better performance
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+        // Add cache headers for better performance (5 minutes)
+        res.setHeader('Cache-Control', 'public, max-age=300');
 
         // Pipe data
         proxyRes.pipe(res);
