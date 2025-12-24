@@ -487,6 +487,8 @@ app.get('/settings', async (req, res) => {
 
     const s = result.content;
     log(`✅ Loaded settings from Cloudinary:`, Object.keys(s));
+    log(`📊 API Key values: tmdb=${s.tmdbApiKey ? '***' + s.tmdbApiKey.slice(-4) : 'null'}, omdb=${s.omdbApiKey ? '***' + s.omdbApiKey.slice(-4) : 'null'}`);
+    log(`🎨 Theme values: bg=${s.themeBackgroundColor}`);
 
     // Parse tabBackgrounds if it's a string
     if (s && s.tabBackgrounds && typeof s.tabBackgrounds === 'string') {
@@ -575,6 +577,9 @@ app.post('/settings', async (req, res) => {
     };
 
     log("⚙️ Saving merged settings to Cloudinary:", Object.keys(settingsToSave));
+    log(`📊 Incoming API keys: tmdb=${s.tmdbApiKey ? '***' + s.tmdbApiKey.slice(-4) : 'null/undefined'}, omdb=${s.omdbApiKey ? '***' + s.omdbApiKey.slice(-4) : 'null/undefined'}`);
+    log(`📊 Final API keys: tmdb=${settingsToSave.tmdbApiKey ? '***' + settingsToSave.tmdbApiKey.slice(-4) : 'null'}, omdb=${settingsToSave.omdbApiKey ? '***' + settingsToSave.omdbApiKey.slice(-4) : 'null'}`);
+    log(`🎨 Theme values: bg=${settingsToSave.themeBackgroundColor}`);
 
     await storage.createOrUpdateFile(
       "settings.json",
