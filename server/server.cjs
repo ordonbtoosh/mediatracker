@@ -1461,6 +1461,17 @@ app.get('/spotify/artist/:id/top-tracks', async (req, res) => {
   }
 });
 
+// Proxy to get Spotify Access Token (resolves CORS issues)
+app.get('/api/spotify-token', async (req, res) => {
+  try {
+    const token = await getServerSpotifyToken();
+    res.json({ access_token: token, expires_in: 3600 });
+  } catch (e) {
+    console.error('❌ /api/spotify-token error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ===============================
 // 📚 Collections endpoints (GitHub Storage)
 // ===============================

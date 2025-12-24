@@ -6300,7 +6300,7 @@ class MediaTracker {
         // Skip banner preload delay for library items - their images are stored locally
         // Only delay for non-library items (from home/search) that need to fetch remote images
         const isLibraryItem = this.isItemInLibrary(item);
-        const shouldDelayBanner = delayForBanner && !isLibraryItem && this.shouldDelayDetailBanner(item);
+        const shouldDelayBanner = delayForBanner && this.shouldDelayDetailBanner(item);
         const shouldMaskDetail = shouldDelayBanner && detailViewElement;
 
         if (shouldMaskDetail) {
@@ -12977,26 +12977,27 @@ class MediaTracker {
         }
 
         // Get new access token
-        const response = await fetch('https://accounts.spotify.com/api/token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': 'Basic ' + btoa(clientId + ':' + clientSecret)
-            },
-            body: 'grant_type=client_credentials'
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to get Spotify access token: ${response.statusText}`);
+        // Get new access token via server proxy to avoid CORS issues
+        let accessToken;
+        try {
+            const response = await fetch(`${API_URL}/api/spotify-token`);
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Failed to get Spotify access token: ${response.status} ${errText}`);
+            }
+            const data = await response.json();
+            accessToken = data.access_token;
+            // Cache locally
+            const expiresIn = data.expires_in || 3600;
+            localStorage.setItem('spotifyAccessToken', accessToken);
+            localStorage.setItem('spotifyTokenExpiry', (Date.now() + (expiresIn - 60) * 1000).toString());
+        } catch (e) {
+            console.error("Token fetch failed, falling back to direct logic if configured (legacy):", e);
+            // Fallback (mostly for local dev without server update)
+            throw e;
         }
 
-        const data = await response.json();
-        const accessToken = data.access_token;
-        const expiresIn = data.expires_in || 3600; // Default to 1 hour
-
-        // Cache the token with expiry time (subtract 60 seconds for safety margin)
-        localStorage.setItem('spotifyAccessToken', accessToken);
-        localStorage.setItem('spotifyTokenExpiry', (Date.now() + (expiresIn - 60) * 1000).toString());
+        return accessToken;
 
         return accessToken;
     }
