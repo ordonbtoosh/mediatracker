@@ -871,9 +871,7 @@ app.post("/add", async (req, res) => {
       }
     }
 
-    const config = getDataRepoConfig();
-    const ghConfig = getGitHubConfig();
-
+    // Using Cloudinary storage - no GitHub config needed
     // Get current item if exists (to preserve image paths)
     let currentItem = null;
     let currentSha = null;
