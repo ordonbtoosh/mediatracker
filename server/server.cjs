@@ -12,155 +12,84 @@ const storage = require("./storage.cjs");
 const githubStorage = storage.github; // For backward compatibility
 const cloudinaryStorage = storage.cloudinary;
 
-const ROOT_DIR = path.join(__dirname, "../");
-const IMG_DIR = path.join(__dirname, "assets", "img");
-
-// Storage configuration cache
-let githubConfig = null;
-let githubConfigSha = {}; // Track file SHAs for updates
-
-// Determine storage provider from environment
-const STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || 'cloudinary'; // Default to cloudinary
-
-// Load storage configuration from environment or local file
+// Load Cloudinary configuration from environment or local file
 function loadStorageConfig() {
-  // Set the storage provider
-  storage.setProvider(STORAGE_PROVIDER);
+  // Always use Cloudinary
+  storage.setProvider('cloudinary');
 
-  if (STORAGE_PROVIDER === 'cloudinary') {
-    // Check Cloudinary environment variables
-    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  // Check Cloudinary environment variables
+  if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+    const cloudConfig = {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      apiSecret: process.env.CLOUDINARY_API_SECRET
+    };
+    storage.configureCloudinary(cloudConfig);
+    console.log("[Cloudinary] ✅ Config loaded from environment variables");
+    return cloudConfig;
+  }
+
+  // Fall back to CLOUDINARY_URL format
+  if (process.env.CLOUDINARY_URL) {
+    // CLOUDINARY_URL format: cloudinary://api_key:api_secret@cloud_name
+    const match = process.env.CLOUDINARY_URL.match(/cloudinary:\/\/(\d+):([^@]+)@(.+)/);
+    if (match) {
       const cloudConfig = {
-        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-        apiKey: process.env.CLOUDINARY_API_KEY,
-        apiSecret: process.env.CLOUDINARY_API_SECRET
+        cloudName: match[3],
+        apiKey: match[1],
+        apiSecret: match[2]
       };
       storage.configureCloudinary(cloudConfig);
-      console.log("[Cloudinary] Config loaded from environment variables");
+      console.log("[Cloudinary] ✅ Config loaded from CLOUDINARY_URL");
       return cloudConfig;
     }
-
-    // Fall back to CLOUDINARY_URL format
-    if (process.env.CLOUDINARY_URL) {
-      // CLOUDINARY_URL format: cloudinary://api_key:api_secret@cloud_name
-      const match = process.env.CLOUDINARY_URL.match(/cloudinary:\/\/(\d+):([^@]+)@(.+)/);
-      if (match) {
-        const cloudConfig = {
-          cloudName: match[3],
-          apiKey: match[1],
-          apiSecret: match[2]
-        };
-        storage.configureCloudinary(cloudConfig);
-        console.log("[Cloudinary] Config loaded from CLOUDINARY_URL");
-        return cloudConfig;
-      }
-    }
-
-    // Fall back to local config file
-    const configPath = path.join(__dirname, "cloudinary-config.json");
-    if (fs.existsSync(configPath)) {
-      try {
-        const configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-        const cloudConfig = {
-          cloudName: configData.cloudName || "",
-          apiKey: configData.apiKey || "",
-          apiSecret: configData.apiSecret || ""
-        };
-        storage.configureCloudinary(cloudConfig);
-        console.log("[Cloudinary] Config loaded from cloudinary-config.json");
-        return cloudConfig;
-      } catch (e) {
-        console.error("[Cloudinary] Error loading config file:", e.message);
-      }
-    }
-
-    console.warn("[Cloudinary] No configuration found. Please set CLOUDINARY_URL or create cloudinary-config.json");
-    return null;
   }
 
-  // GitHub storage (legacy)
-  if (process.env.GITHUB_TOKEN && process.env.GITHUB_OWNER) {
-    githubConfig = {
-      token: process.env.GITHUB_TOKEN,
-      owner: process.env.GITHUB_OWNER,
-      dataRepo: process.env.GITHUB_DATA_REPO || "mediatracker-data",
-      imageRepos: (process.env.GITHUB_IMAGE_REPOS || "mediatracker-images-1").split(",").map(s => s.trim())
-    };
-    storage.configureGitHub(githubConfig);
-    console.log("[GitHub] Config loaded from environment variables");
-    return githubConfig;
-  }
-
-  // Fall back to local config file
-  const configPath = path.join(__dirname, "github-config.json");
+  // Fall back to local config file (for development)
+  const configPath = path.join(__dirname, "cloudinary-config.json");
   if (fs.existsSync(configPath)) {
     try {
       const configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-      githubConfig = {
-        token: configData.githubToken || "",
-        owner: configData.githubOwner || "",
-        dataRepo: configData.githubDataRepo || "mediatracker-data",
-        imageRepos: Array.isArray(configData.githubImageRepos)
-          ? configData.githubImageRepos
-          : (configData.githubImageRepos || "mediatracker-images-1").split(",").map(s => s.trim())
+      const cloudConfig = {
+        cloudName: configData.cloudName || "",
+        apiKey: configData.apiKey || "",
+        apiSecret: configData.apiSecret || ""
       };
-      storage.configureGitHub(githubConfig);
-      console.log("[GitHub] Config loaded from github-config.json");
-      return githubConfig;
+      storage.configureCloudinary(cloudConfig);
+      console.log("[Cloudinary] ✅ Config loaded from cloudinary-config.json");
+      return cloudConfig;
     } catch (e) {
-      console.error("[GitHub] Error loading config file:", e.message);
+      console.error("[Cloudinary] Error loading config file:", e.message);
     }
   }
 
-  console.warn("[Storage] No configuration found. Please set environment variables or create config file");
+  console.error("[Cloudinary] ❌ No configuration found! Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables");
   return null;
 }
 
-// Initialize storage on startup
+// Initialize Cloudinary storage on startup
 loadStorageConfig();
 
-// Get current GitHub config (for backward compatibility)
-function getGitHubConfig() {
-  if (!githubConfig && STORAGE_PROVIDER === 'github') {
-    loadStorageConfig();
-  }
-  return githubConfig;
-}
+// ROOT_DIR and IMG_DIR for local file operations
+const ROOT_DIR = path.join(__dirname, "../");
+const IMG_DIR = path.join(__dirname, "assets", "img");
 
-// Update GitHub config (called when settings are saved)
-function updateGitHubConfig(config) {
-  githubConfig = config;
-  // Save to local file for persistence
-  const configPath = path.join(__dirname, "github-config.json");
-  try {
-    fs.writeFileSync(configPath, JSON.stringify({
-      githubToken: config.token,
-      githubOwner: config.owner,
-      githubDataRepo: config.dataRepo,
-      githubImageRepos: config.imageRepos
-    }, null, 2));
-    console.log("[GitHub] Config saved to github-config.json");
-  } catch (e) {
-    console.error("[GitHub] Error saving config:", e.message);
-  }
-}
-
-// Check if storage is configured (works with both GitHub and Cloudinary)
+// Check if Cloudinary storage is configured
 function isGitHubConfigured() {
-  // Use the unified storage check
+  // Renamed for legacy compatibility, but actually checks Cloudinary
   return storage.isConfigured();
 }
 
-// Helper to get data repo config (GitHub specific, returns null for Cloudinary)
+// Helper to get data repo config (returns null for Cloudinary)
 function getDataRepoConfig() {
-  return storage.getDataRepoConfig();
+  return null;
 }
 
 // ===============================
-// 🔄 MOCK DB OBJECT - Redirects legacy db.all calls to GitHub
+// 🔄 MOCK DB OBJECT - Redirects legacy db.all calls to storage
 // ===============================
 // This mock `db` object intercepts callback-based db.all() calls that were
-// used with DuckDB and redirects them to our GitHub storage.
+// used with DuckDB and redirects them to our Cloudinary storage.
 // This allows us to keep the 26+ callback-based endpoints working without
 // extensive refactoring.
 
@@ -602,41 +531,9 @@ app.post('/settings', async (req, res) => {
       delete s.cloudinaryApiSecret;
     }
 
-    // Handle GitHub configuration if provided (legacy)
-    if (s.githubToken || s.githubOwner || s.githubDataRepo || s.githubImageRepos) {
-      const newConfig = {
-        token: s.githubToken || (githubConfig?.token || ""),
-        owner: s.githubOwner || (githubConfig?.owner || ""),
-        dataRepo: s.githubDataRepo || (githubConfig?.dataRepo || "mediatracker-data"),
-        imageRepos: s.githubImageRepos
-          ? (Array.isArray(s.githubImageRepos) ? s.githubImageRepos : s.githubImageRepos.split(",").map(r => r.trim()))
-          : (githubConfig?.imageRepos || ["mediatracker-images-1"])
-      };
-      updateGitHubConfig(newConfig);
-
-      // Remove GitHub config from settings object (stored separately)
-      delete s.githubToken;
-      delete s.githubOwner;
-      delete s.githubDataRepo;
-      delete s.githubImageRepos;
-    }
-
     if (!isGitHubConfigured()) {
-      console.warn("Storage not configured, cannot save settings");
-      return res.json({ ok: true, warning: "Storage not configured" });
-    }
-
-    // Get current SHA for GitHub updates
-    let currentSha = githubConfigSha.settings || null;
-    if (!currentSha && STORAGE_PROVIDER === 'github') {
-      try {
-        const current = await storage.getFileContent("settings.json");
-        if (current && current.sha) {
-          currentSha = current.sha;
-        }
-      } catch (e) {
-        // File might not exist yet
-      }
+      console.warn("Cloudinary not configured, cannot save settings");
+      return res.json({ ok: true, warning: "Cloudinary storage not configured" });
     }
 
     // Prepare settings object
@@ -660,23 +557,18 @@ app.post('/settings', async (req, res) => {
       tabBackgrounds: s.tabBackgrounds || null
     };
 
-    log("⚙️ Saving settings to storage...");
+    log("⚙️ Saving settings to Cloudinary...");
 
-    const result = await storage.createOrUpdateFile(
+    await storage.createOrUpdateFile(
       "settings.json",
       settingsToSave,
-      "Update settings",
-      currentSha
+      "Update settings"
     );
-
-    if (result.sha) {
-      githubConfigSha.settings = result.sha;
-    }
 
     // Invalidate settings cache so next request gets fresh data
     invalidateSettingsCache();
 
-    log("✅ Settings saved to storage");
+    log("✅ Settings saved to Cloudinary");
 
     res.json({ ok: true });
   } catch (error) {
