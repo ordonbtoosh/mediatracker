@@ -6300,7 +6300,7 @@ class MediaTracker {
         // Skip banner preload delay for library items - their images are stored locally
         // Only delay for non-library items (from home/search) that need to fetch remote images
         const isLibraryItem = this.isItemInLibrary(item);
-        const shouldDelayBanner = delayForBanner && !isLibraryItem && this.shouldDelayDetailBanner(item);
+        const shouldDelayBanner = delayForBanner && this.shouldDelayDetailBanner(item);
         const shouldMaskDetail = shouldDelayBanner && detailViewElement;
 
         if (shouldMaskDetail) {
@@ -16761,3 +16761,4 @@ document.addEventListener('DOMContentLoaded', () => {
     tracker.setupVotesSlider();
     tracker.setupRatingSlider();
 });
+
