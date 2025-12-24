@@ -1072,15 +1072,18 @@ app.post("/delete", async (req, res) => {
         const itemResult = await storage.getFileContent(`media/${id}.json`);
         if (itemResult) {
           const item = itemResult.content;
+          console.log(`🗑️ Deleting item ${id}, posterPath: ${item.posterPath || 'none'}, bannerPath: ${item.bannerPath || 'none'}`);
 
-          // Delete poster and banner images
+          // Delete poster and banner images from Cloudinary
           const imageDeletePromises = [];
           if (item.posterPath) {
+            console.log(`🗑️ Deleting poster for ${id}: ${id}_poster`);
             imageDeletePromises.push(
               storage.deleteImage(`${id}_poster`).catch(e => console.warn(`Could not delete poster: ${e.message}`))
             );
           }
           if (item.bannerPath) {
+            console.log(`🗑️ Deleting banner for ${id}: ${id}_banner`);
             imageDeletePromises.push(
               storage.deleteImage(`${id}_banner`).catch(e => console.warn(`Could not delete banner: ${e.message}`))
             );

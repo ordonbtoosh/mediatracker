@@ -197,7 +197,12 @@ async function uploadImage(imageData, filePath, message = 'Upload image') {
  */
 async function deleteImage(identifier, sha = null) {
     if (storageProvider === 'cloudinary') {
-        return await cloudinaryStorage.deleteImage(identifier);
+        // Add the folder prefix if not already present
+        const publicId = identifier.startsWith('mediatracker/')
+            ? identifier
+            : `mediatracker/images/${identifier}`;
+        console.log(`[Storage] Deleting image from Cloudinary: ${publicId}`);
+        return await cloudinaryStorage.deleteImage(publicId);
     }
 
     // GitHub - need to know which repo the image is in
