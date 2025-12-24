@@ -12315,15 +12315,24 @@ class MediaTracker {
                     description: row.description || "",
                     myRank: row.myRank != null ? parseFloat(row.myRank) || 0 : 0,
                     // Handle absolute URLs, relative paths, and bare filenames
+                    // IMPORTANT: Skip local 'assets/img/' paths as they don't persist on Render
                     posterBase64: row.posterPath
                         ? (row.posterPath.startsWith('http')
                             ? row.posterPath
-                            : (row.posterPath.includes('/') ? `${API_URL}/${row.posterPath}` : `${API_URL}/assets/img/${row.posterPath}`))
+                            : (row.posterPath.startsWith('assets/img/')
+                                ? (row.posterImageRepo
+                                    ? `https://raw.githubusercontent.com/${window.GITHUB_OWNER || 'ordonbtoosh'}/${row.posterImageRepo}/main/${row.posterPath.replace('assets/img/', '')}`
+                                    : '') // Don't use broken local paths
+                                : (row.posterPath.includes('/') ? `${API_URL}/${row.posterPath}` : `${API_URL}/assets/img/${row.posterPath}`)))
                         : "",
                     bannerBase64: row.bannerPath
                         ? (row.bannerPath.startsWith('http')
                             ? row.bannerPath
-                            : (row.bannerPath.includes('/') ? `${API_URL}/${row.bannerPath}` : `${API_URL}/assets/img/${row.bannerPath}`))
+                            : (row.bannerPath.startsWith('assets/img/')
+                                ? (row.bannerImageRepo
+                                    ? `https://raw.githubusercontent.com/${window.GITHUB_OWNER || 'ordonbtoosh'}/${row.bannerImageRepo}/main/${row.bannerPath.replace('assets/img/', '')}`
+                                    : '') // Don't use broken local paths
+                                : (row.bannerPath.includes('/') ? `${API_URL}/${row.bannerPath}` : `${API_URL}/assets/img/${row.bannerPath}`)))
                         : "",
                     gender: row.gender || "",
                     birthday: row.birthday || "",
