@@ -119,10 +119,10 @@ function loadStorageConfig() {
 // Initialize storage on startup
 loadStorageConfig();
 
-// Get current GitHub config (with lazy loading)
+// Get current GitHub config (for backward compatibility)
 function getGitHubConfig() {
-  if (!githubConfig) {
-    loadGitHubConfig();
+  if (!githubConfig && STORAGE_PROVIDER === 'github') {
+    loadStorageConfig();
   }
   return githubConfig;
 }
@@ -520,8 +520,7 @@ function authMiddleware(req, res, next) {
 
 app.use(authMiddleware);
 
-// Initialize GitHub config on startup
-loadGitHubConfig();
+// Storage was already initialized at startup via loadStorageConfig()
 
 // Cache for IMDb chart IDs (cache for 1 hour to speed up requests)
 const imdbChartCache = {
