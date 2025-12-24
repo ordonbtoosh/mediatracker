@@ -509,6 +509,7 @@ app.get('/settings', async (req, res) => {
 app.post('/settings', async (req, res) => {
   try {
     const s = req.body || {};
+    log("📝 POST /settings called with:", Object.keys(s));
 
     // Handle Cloudinary configuration if provided
     if (s.cloudinaryCloudName || s.cloudinaryApiKey || s.cloudinaryApiSecret) {
@@ -539,28 +540,41 @@ app.post('/settings', async (req, res) => {
       return res.json({ ok: true, warning: "Cloudinary storage not configured" });
     }
 
-    // Prepare settings object
+    // Load existing settings first to merge
+    let existingSettings = {};
+    try {
+      const existing = await storage.getFileContent("settings.json");
+      if (existing && existing.content) {
+        existingSettings = existing.content;
+        log("📂 Loaded existing settings to merge:", Object.keys(existingSettings));
+      }
+    } catch (e) {
+      log("📭 No existing settings found, creating new");
+    }
+
+    // Merge new settings with existing (new values override old)
     const settingsToSave = {
-      themeBackgroundColor: s.themeBackgroundColor || null,
-      themeHoverColor: s.themeHoverColor || null,
-      themeTitleColor: s.themeTitleColor || null,
-      themeTextColor: s.themeTextColor || null,
-      themeFontFamily: s.themeFontFamily || null,
-      themeDropdownColor: s.themeDropdownColor || null,
-      tmdbApiKey: s.tmdbApiKey || null,
-      malApiKey: s.malApiKey || null,
-      steamApiKey: s.steamApiKey || null,
-      steamgriddbApiKey: s.steamgriddbApiKey || null,
-      fanarttvApiKey: s.fanarttvApiKey || null,
-      omdbApiKey: s.omdbApiKey || null,
-      spotifyClientId: s.spotifyClientId || null,
-      spotifyClientSecret: s.spotifyClientSecret || null,
-      youtubeApiKey: s.youtubeApiKey || null,
-      bioMaxChars: Number.isFinite(Number(s.bioMaxChars)) ? Number(s.bioMaxChars) : null,
-      tabBackgrounds: s.tabBackgrounds || null
+      ...existingSettings,
+      themeBackgroundColor: s.themeBackgroundColor !== undefined ? s.themeBackgroundColor : existingSettings.themeBackgroundColor,
+      themeHoverColor: s.themeHoverColor !== undefined ? s.themeHoverColor : existingSettings.themeHoverColor,
+      themeTitleColor: s.themeTitleColor !== undefined ? s.themeTitleColor : existingSettings.themeTitleColor,
+      themeTextColor: s.themeTextColor !== undefined ? s.themeTextColor : existingSettings.themeTextColor,
+      themeFontFamily: s.themeFontFamily !== undefined ? s.themeFontFamily : existingSettings.themeFontFamily,
+      themeDropdownColor: s.themeDropdownColor !== undefined ? s.themeDropdownColor : existingSettings.themeDropdownColor,
+      tmdbApiKey: s.tmdbApiKey !== undefined ? s.tmdbApiKey : existingSettings.tmdbApiKey,
+      malApiKey: s.malApiKey !== undefined ? s.malApiKey : existingSettings.malApiKey,
+      steamApiKey: s.steamApiKey !== undefined ? s.steamApiKey : existingSettings.steamApiKey,
+      steamgriddbApiKey: s.steamgriddbApiKey !== undefined ? s.steamgriddbApiKey : existingSettings.steamgriddbApiKey,
+      fanarttvApiKey: s.fanarttvApiKey !== undefined ? s.fanarttvApiKey : existingSettings.fanarttvApiKey,
+      omdbApiKey: s.omdbApiKey !== undefined ? s.omdbApiKey : existingSettings.omdbApiKey,
+      spotifyClientId: s.spotifyClientId !== undefined ? s.spotifyClientId : existingSettings.spotifyClientId,
+      spotifyClientSecret: s.spotifyClientSecret !== undefined ? s.spotifyClientSecret : existingSettings.spotifyClientSecret,
+      youtubeApiKey: s.youtubeApiKey !== undefined ? s.youtubeApiKey : existingSettings.youtubeApiKey,
+      bioMaxChars: s.bioMaxChars !== undefined ? (Number.isFinite(Number(s.bioMaxChars)) ? Number(s.bioMaxChars) : null) : existingSettings.bioMaxChars,
+      tabBackgrounds: s.tabBackgrounds !== undefined ? s.tabBackgrounds : existingSettings.tabBackgrounds
     };
 
-    log("⚙️ Saving settings to Cloudinary...");
+    log("⚙️ Saving merged settings to Cloudinary:", Object.keys(settingsToSave));
 
     await storage.createOrUpdateFile(
       "settings.json",
@@ -576,6 +590,7 @@ app.post('/settings', async (req, res) => {
     res.json({ ok: true });
   } catch (error) {
     console.error('❌ Error saving settings:', error.message);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({ error: error.message });
   }
 });
