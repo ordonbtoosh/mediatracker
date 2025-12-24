@@ -898,6 +898,17 @@ app.post("/add", async (req, res) => {
     const needsPosterUpload = posterBase64?.startsWith("data:image");
     const needsBannerUpload = bannerBase64?.startsWith("data:image");
 
+    console.log("📷 Image upload check:", {
+      hasPosterBase64: !!posterBase64,
+      posterBase64Prefix: posterBase64?.substring(0, 50),
+      needsPosterUpload,
+      hasBannerBase64: !!bannerBase64,
+      bannerBase64Prefix: bannerBase64?.substring(0, 50),
+      needsBannerUpload,
+      existingPosterPath: posterPath,
+      existingBannerPath: bannerPath
+    });
+
     if (needsPosterUpload || needsBannerUpload) {
       try {
         // Select image repository ONCE for both uploads
@@ -948,6 +959,13 @@ app.post("/add", async (req, res) => {
         console.error("❌ Error during image upload:", imgError.message);
       }
     }
+
+    console.log("💾 Final paths being saved:", {
+      posterPath,
+      posterImageRepo,
+      bannerPath,
+      bannerImageRepo
+    });
 
     // Create media item object
     const mediaItem = {
