@@ -14912,6 +14912,9 @@ class MediaTracker {
     }
 
     saveSettings() {
+        // Preserve tabBackgrounds BEFORE overwriting this.data.settings
+        const existingTabBackgrounds = (this.data && this.data.settings && this.data.settings.tabBackgrounds) || {};
+
         this.data.settings = {
             themeBackgroundColor: document.getElementById('bgColor').value,
             themeHoverColor: document.getElementById('hoverColor').value,
@@ -14933,13 +14936,16 @@ class MediaTracker {
                 if (!el) return null;
                 const v = parseInt(el.value, 10);
                 return Number.isFinite(v) ? v : null;
-            })()
+            })(),
+            tabBackgrounds: existingTabBackgrounds
         };
-        // Preserve any existing tabBackgrounds (don't overwrite with empty on save)
-        try {
-            const existing = (this.data && this.data.settings && this.data.settings.tabBackgrounds) || {};
-            this.data.settings.tabBackgrounds = existing;
-        } catch (e) { this.data.settings.tabBackgrounds = this.data.settings.tabBackgrounds || {}; }
+
+        // Log what we're saving for debugging
+        console.log('📝 Saving settings:', {
+            tmdbApiKey: this.data.settings.tmdbApiKey ? '***' + this.data.settings.tmdbApiKey.slice(-4) : '(empty)',
+            omdbApiKey: this.data.settings.omdbApiKey ? '***' + this.data.settings.omdbApiKey.slice(-4) : '(empty)',
+            bgColor: this.data.settings.themeBackgroundColor
+        });
 
         // Save to localStorage so index.html can read it immediately on reload
         try {
