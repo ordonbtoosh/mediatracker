@@ -1399,24 +1399,31 @@ app.get('/api/github-image', async (req, res) => {
 // ===============================
 // 🔐 Spotify proxy (server-side)
 // ===============================
-async function getServerSpotifyToken() {
+async function getServerSpotifyToken(manualClientId, manualClientSecret) {
   try {
-    // Get settings from GitHub
-    let settings = {};
-    if (isGitHubConfigured()) {
-      try {
-        const config = getDataRepoConfig();
-        const result = await githubStorage.getFileContent(config, "settings.json");
-        settings = result?.content || {};
-      } catch (e) {
-        console.warn("Could not load settings from GitHub:", e.message);
+    let clientId = manualClientId;
+    let clientSecret = manualClientSecret;
+
+    // If credentials not provided manually, try to load from settings/env
+    if (!clientId || !clientSecret) {
+      // Get settings from GitHub
+      let settings = {};
+      if (isGitHubConfigured()) {
+        try {
+          const config = getDataRepoConfig();
+          const result = await githubStorage.getFileContent(config, "settings.json");
+          settings = result?.content || {};
+        } catch (e) {
+          console.warn("Could not load settings from GitHub:", e.message);
+        }
       }
+
+      clientId = clientId || settings.spotifyClientId || process.env.SPOTIFY_CLIENT_ID || '';
+      clientSecret = clientSecret || settings.spotifyClientSecret || process.env.SPOTIFY_CLIENT_SECRET || '';
     }
 
-    const clientId = settings.spotifyClientId || process.env.SPOTIFY_CLIENT_ID || '';
-    const clientSecret = settings.spotifyClientSecret || process.env.SPOTIFY_CLIENT_SECRET || '';
     if (!clientId || !clientSecret) {
-      throw new Error('Spotify Client ID/Secret not configured on server');
+      throw new Error('Spotify Client ID/Secret not configured on server or provided in request');
     }
 
     const tokenResponse = await makeRequest('https://accounts.spotify.com/api/token', {
@@ -1462,12 +1469,25 @@ app.get('/spotify/artist/:id/top-tracks', async (req, res) => {
 });
 
 // Proxy to get Spotify Access Token (resolves CORS issues)
+// Supports POST to accept client-side credentials if server doesn't have them
+app.post('/api/spotify-token', async (req, res) => {
+  try {
+    const { clientId, clientSecret } = req.body || {};
+    const token = await getServerSpotifyToken(clientId, clientSecret);
+    res.json({ access_token: token, expires_in: 3600 });
+  } catch (e) {
+    console.error('❌ /api/spotify-token error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Support GET for backward compatibility (uses server settings only)
 app.get('/api/spotify-token', async (req, res) => {
   try {
     const token = await getServerSpotifyToken();
     res.json({ access_token: token, expires_in: 3600 });
   } catch (e) {
-    console.error('❌ /api/spotify-token error:', e.message);
+    console.error('❌ /api/spotify-token GET error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });

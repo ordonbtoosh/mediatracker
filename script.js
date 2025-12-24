@@ -12976,11 +12976,20 @@ class MediaTracker {
             return cachedToken;
         }
 
-        // Get new access token
         // Get new access token via server proxy to avoid CORS issues
+        // We send the client ID/Secret from local settings so the server can use them
+        // if it doesn't have them configured server-side.
         let accessToken;
         try {
-            const response = await fetch(`${API_URL}/api/spotify-token`);
+            const response = await fetch(`${API_URL}/api/spotify-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clientId: this.data.settings?.spotifyClientId,
+                    clientSecret: this.data.settings?.spotifyClientSecret
+                })
+            });
+
             if (!response.ok) {
                 const errText = await response.text();
                 throw new Error(`Failed to get Spotify access token: ${response.status} ${errText}`);
@@ -12992,8 +13001,7 @@ class MediaTracker {
             localStorage.setItem('spotifyAccessToken', accessToken);
             localStorage.setItem('spotifyTokenExpiry', (Date.now() + (expiresIn - 60) * 1000).toString());
         } catch (e) {
-            console.error("Token fetch failed, falling back to direct logic if configured (legacy):", e);
-            // Fallback (mostly for local dev without server update)
+            console.error("Token fetch failed:", e);
             throw e;
         }
 
