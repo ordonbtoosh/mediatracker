@@ -6069,6 +6069,23 @@ class MediaTracker {
         this.currentView = 'detail';
         this.currentItem = item;
 
+        // Reset visible elements to prevent flashing old content
+        const detailBannerEl = document.getElementById('bannerImage');
+        if (detailBannerEl) {
+            detailBannerEl.removeAttribute('src');
+            // Also clear the background directly if it was used as fallback
+            detailBannerEl.style.backgroundImage = 'none';
+        }
+
+        const detailPosterEl = document.getElementById('detailPoster');
+        if (detailPosterEl) detailPosterEl.removeAttribute('src');
+
+        const detailTitleEl = document.getElementById('detailTitle');
+        if (detailTitleEl) detailTitleEl.textContent = '';
+
+        const detailDescEl = document.getElementById('detailDescription');
+        if (detailDescEl) detailDescEl.textContent = '';
+
         // Hide all views, show detail view
         const homeView = document.getElementById('homeView');
         const libraryView = document.getElementById('libraryView');
@@ -15343,19 +15360,16 @@ class MediaTracker {
             const reloadedItem = this.data.items.find(i => i.id === item.id);
             if (reloadedItem) {
                 this.currentItem = reloadedItem;
-                const timestamp = Date.now();
-                // Update the displayed image to the new one from DB with cache busting
+                // Update the displayed image to the new one from DB
                 if (this.currentImageType === 'poster') {
                     const posterEl = document.getElementById('detailPoster');
                     if (posterEl && reloadedItem.posterBase64) {
-                        const url = this.getProxiedImageUrl(reloadedItem.posterBase64);
-                        posterEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
+                        posterEl.src = this.getProxiedImageUrl(reloadedItem.posterBase64);
                     }
                 } else {
                     const bannerEl = document.getElementById('bannerImage');
                     if (bannerEl && reloadedItem.bannerBase64) {
-                        const url = this.getProxiedImageUrl(reloadedItem.bannerBase64);
-                        bannerEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
+                        bannerEl.src = this.getProxiedImageUrl(reloadedItem.bannerBase64);
                     }
                 }
             }
@@ -15466,19 +15480,16 @@ class MediaTracker {
             const reloadedItem = this.data.items.find(i => i.id === item.id);
             if (reloadedItem) {
                 this.currentItem = reloadedItem;
-                const timestamp = Date.now();
-                // Update the displayed image to the new one from DB with cache busting
+                // Update the displayed image to the new one from DB
                 if (imageType === 'poster') {
                     const posterEl = document.getElementById('detailPoster');
                     if (posterEl && reloadedItem.posterBase64) {
-                        const url = this.getProxiedImageUrl(reloadedItem.posterBase64);
-                        posterEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
+                        posterEl.src = this.getProxiedImageUrl(reloadedItem.posterBase64);
                     }
                 } else {
                     const bannerEl = document.getElementById('bannerImage');
                     if (bannerEl && reloadedItem.bannerBase64) {
-                        const url = this.getProxiedImageUrl(reloadedItem.bannerBase64);
-                        bannerEl.src = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
+                        bannerEl.src = this.getProxiedImageUrl(reloadedItem.bannerBase64);
                     }
                 }
             }
