@@ -867,14 +867,16 @@ async function getSettingsRow() {
       return {};
     }
 
-    const config = getDataRepoConfig();
-    const result = await githubStorage.getFileContent(config, "settings.json");
+    // Use unified storage abstraction
+    const result = await storage.getFileContent("settings.json");
     settingsCache = result?.content || {};
     settingsCacheTime = Date.now();
-    githubConfigSha.settings = result?.sha;
+    if (result?.sha) {
+      githubConfigSha.settings = result.sha;
+    }
     return settingsCache;
   } catch (e) {
-    console.warn("Could not load settings from GitHub:", e.message);
+    console.warn("Could not load settings from storage:", e.message);
     return settingsCache || {};
   }
 }
@@ -886,12 +888,12 @@ function invalidateSettingsCache() {
 }
 
 // ===============================
-// 📤 Add / Update item (GitHub Storage)
+// 📤 Add / Update item (Unified Storage)
 // ===============================
 app.post("/add", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const it = req.body || {};
@@ -911,8 +913,7 @@ app.post("/add", async (req, res) => {
     if ((category === 'movies' || category === 'tv') && externalApiId) {
       try {
         // Get API keys from settings
-        const config = getDataRepoConfig();
-        const settingsResult = await githubStorage.getFileContent(config, "settings.json");
+        const settingsResult = await storage.getFileContent("settings.json");
         const settings = settingsResult?.content || {};
         const tmdbApiKey = settings.tmdbApiKey;
         const omdbApiKey = settings.omdbApiKey;
@@ -959,11 +960,11 @@ app.post("/add", async (req, res) => {
     const config = getDataRepoConfig();
     const ghConfig = getGitHubConfig();
 
-    // Get current item if exists (to preserve SHA and image paths)
+    // Get current item if exists (to preserve image paths)
     let currentItem = null;
     let currentSha = null;
     try {
-      const existing = await githubStorage.getFileContent(config, `media/${id}.json`);
+      const existing = await storage.getFileContent(`media/${id}.json`);
       if (existing) {
         currentItem = existing.content;
         currentSha = existing.sha;
@@ -972,11 +973,9 @@ app.post("/add", async (req, res) => {
       // Item doesn't exist yet
     }
 
-    // Handle poster and banner image uploads to GitHub
+    // Handle poster and banner image uploads
     let posterPath = it.posterPath || currentItem?.posterPath || "";
-    let posterImageRepo = currentItem?.posterImageRepo || null;
     let bannerPath = it.bannerPath || currentItem?.bannerPath || "";
-    let bannerImageRepo = currentItem?.bannerImageRepo || null;
 
     const needsPosterUpload = posterBase64?.startsWith("data:image");
     const needsBannerUpload = bannerBase64?.startsWith("data:image");
@@ -994,50 +993,36 @@ app.post("/add", async (req, res) => {
 
     if (needsPosterUpload || needsBannerUpload) {
       try {
-        // Select image repository ONCE for both uploads
-        const selectedRepo = await githubStorage.selectImageRepo(
-          { owner: ghConfig.owner, token: ghConfig.token },
-          ghConfig.imageRepos
-        );
+        // Upload images using unified storage abstraction
+        const uploadPromises = [];
 
-        if (selectedRepo) {
-          const imgConfig = { owner: ghConfig.owner, repo: selectedRepo, token: ghConfig.token };
-
-          // Upload both images in parallel
-          const uploadPromises = [];
-
-          if (needsPosterUpload) {
-            uploadPromises.push(
-              githubStorage.uploadImage(imgConfig, `${id}_poster.webp`, posterBase64, `Upload poster for ${id}`)
-                .then(result => {
-                  posterPath = result.downloadUrl;
-                  posterImageRepo = selectedRepo;
-                  log(`✅ Uploaded poster to ${selectedRepo}: ${posterPath}`);
-                })
-                .catch(err => {
-                  console.error("❌ Error uploading poster to GitHub:", err.message);
-                })
-            );
-          }
-
-          if (needsBannerUpload) {
-            uploadPromises.push(
-              githubStorage.uploadImage(imgConfig, `${id}_banner.webp`, bannerBase64, `Upload banner for ${id}`)
-                .then(result => {
-                  bannerPath = result.downloadUrl;
-                  bannerImageRepo = selectedRepo;
-                  log(`✅ Uploaded banner to ${selectedRepo}: ${bannerPath}`);
-                })
-                .catch(err => {
-                  console.error("❌ Error uploading banner to GitHub:", err.message);
-                })
-            );
-          }
-
-          await Promise.all(uploadPromises);
-        } else {
-          console.error("❌ No GitHub image repo available. Images will not be saved!");
+        if (needsPosterUpload) {
+          uploadPromises.push(
+            storage.uploadImage(posterBase64, `${id}_poster.webp`, `Upload poster for ${id}`)
+              .then(result => {
+                posterPath = result.url;
+                log(`✅ Uploaded poster: ${posterPath}`);
+              })
+              .catch(err => {
+                console.error("❌ Error uploading poster:", err.message);
+              })
+          );
         }
+
+        if (needsBannerUpload) {
+          uploadPromises.push(
+            storage.uploadImage(bannerBase64, `${id}_banner.webp`, `Upload banner for ${id}`)
+              .then(result => {
+                bannerPath = result.url;
+                log(`✅ Uploaded banner: ${bannerPath}`);
+              })
+              .catch(err => {
+                console.error("❌ Error uploading banner:", err.message);
+              })
+          );
+        }
+
+        await Promise.all(uploadPromises);
       } catch (imgError) {
         console.error("❌ Error during image upload:", imgError.message);
       }
@@ -1045,9 +1030,7 @@ app.post("/add", async (req, res) => {
 
     console.log("💾 Final paths being saved:", {
       posterPath,
-      posterImageRepo,
-      bannerPath,
-      bannerImageRepo
+      bannerPath
     });
 
     // Create media item object
@@ -1062,8 +1045,6 @@ app.post("/add", async (req, res) => {
       myRank: myRank ?? 0,
       posterPath: posterPath || "",
       bannerPath: bannerPath || "",
-      posterImageRepo,
-      bannerImageRepo,
       gender: gender || "",
       birthday: birthday || "",
       placeOfBirth: placeOfBirth || "",
@@ -1081,9 +1062,8 @@ app.post("/add", async (req, res) => {
       source: source || ""
     };
 
-    // Save media item to GitHub
-    await githubStorage.createOrUpdateFile(
-      config,
+    // Save media item to storage
+    await storage.createOrUpdateFile(
       `media/${id}.json`,
       mediaItem,
       `${currentSha ? 'Update' : 'Add'} ${title}`,
@@ -1093,12 +1073,11 @@ app.post("/add", async (req, res) => {
     // Update media index if new item
     if (!currentSha) {
       try {
-        const indexResult = await githubStorage.getFileContent(config, "media/index.json");
+        const indexResult = await storage.getFileContent("media/index.json");
         let index = indexResult?.content || [];
         if (!index.includes(id)) {
           index.push(id);
-          await githubStorage.createOrUpdateFile(
-            config,
+          await storage.createOrUpdateFile(
             "media/index.json",
             index,
             `Add ${id} to index`,
@@ -1107,7 +1086,7 @@ app.post("/add", async (req, res) => {
         }
       } catch (e) {
         // Create index if doesn't exist
-        await githubStorage.createOrUpdateFile(config, "media/index.json", [id], "Initialize media index");
+        await storage.createOrUpdateFile("media/index.json", [id], "Initialize media index");
       }
     }
 
@@ -1121,7 +1100,7 @@ app.post("/add", async (req, res) => {
 });
 
 // ===============================
-// 📥 List items (GitHub Storage)
+// 📥 List items (Unified Storage)
 // ===============================
 app.get("/list", async (req, res) => {
   try {
@@ -1129,10 +1108,8 @@ app.get("/list", async (req, res) => {
       return res.json([]);
     }
 
-    const config = getDataRepoConfig();
-
     // Get media index
-    const indexResult = await githubStorage.getFileContent(config, "media/index.json");
+    const indexResult = await storage.getFileContent("media/index.json");
     const index = indexResult?.content || [];
 
     if (index.length === 0) {
@@ -1143,7 +1120,7 @@ app.get("/list", async (req, res) => {
     const items = [];
     for (const id of index) {
       try {
-        const itemResult = await githubStorage.getFileContent(config, `media/${id}.json`);
+        const itemResult = await storage.getFileContent(`media/${id}.json`);
         if (itemResult?.content) {
           items.push(itemResult.content);
         }
@@ -1163,12 +1140,12 @@ app.get("/list", async (req, res) => {
 });
 
 // ===============================
-// 🗑️ Delete items (GitHub Storage)
+// 🗑️ Delete items (Unified Storage)
 // ===============================
 app.post("/delete", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const { ids } = req.body || {};
@@ -1176,74 +1153,30 @@ app.post("/delete", async (req, res) => {
       return res.status(400).send("Missing or invalid ids array");
     }
 
-    const config = getDataRepoConfig();
-    const ghConfig = getGitHubConfig();
-
-    // Helper to extract repo from GitHub URL
-    const extractRepoFromUrl = (url) => {
-      if (!url || !url.includes('raw.githubusercontent.com')) return null;
-      const match = url.match(/raw\.githubusercontent\.com\/[^\/]+\/([^\/]+)/);
-      return match ? match[1] : null;
-    };
-
-    // Helper to delete image from a specific repo
-    const deleteImageFromRepo = async (repo, filename) => {
-      try {
-        const imgConfig = { owner: ghConfig.owner, repo, token: ghConfig.token };
-        const file = await githubStorage.getFileContent(imgConfig, filename);
-        if (file) {
-          await githubStorage.deleteFile(imgConfig, filename, file.sha, `Delete ${filename}`);
-          return true;
-        }
-      } catch (e) {
-        // File might not exist in this repo
-      }
-      return false;
-    };
-
-    // Helper to delete image (try specified repo first, then search all repos)
-    const deleteImage = async (id, type, specifiedRepo, urlPath) => {
-      const filename = `${id}_${type}.webp`;
-
-      // Try to extract repo from URL if available
-      let repoFromUrl = extractRepoFromUrl(urlPath);
-
-      // Try specified repo first
-      if (specifiedRepo) {
-        if (await deleteImageFromRepo(specifiedRepo, filename)) return true;
-      }
-
-      // Try repo from URL
-      if (repoFromUrl && repoFromUrl !== specifiedRepo) {
-        if (await deleteImageFromRepo(repoFromUrl, filename)) return true;
-      }
-
-      // Search all image repos as fallback
-      for (const repo of ghConfig.imageRepos) {
-        if (repo !== specifiedRepo && repo !== repoFromUrl) {
-          if (await deleteImageFromRepo(repo, filename)) return true;
-        }
-      }
-
-      return false;
-    };
-
     // Delete all items in parallel
     const deletePromises = ids.map(async (id) => {
       try {
-        // Get item to find image repos
-        const itemResult = await githubStorage.getFileContent(config, `media/${id}.json`);
+        // Get item to find image info
+        const itemResult = await storage.getFileContent(`media/${id}.json`);
         if (itemResult) {
           const item = itemResult.content;
 
-          // Delete poster and banner in parallel
-          await Promise.all([
-            deleteImage(id, 'poster', item.posterImageRepo, item.posterPath),
-            deleteImage(id, 'banner', item.bannerImageRepo, item.bannerPath)
-          ]);
+          // Delete poster and banner images
+          const imageDeletePromises = [];
+          if (item.posterPath) {
+            imageDeletePromises.push(
+              storage.deleteImage(`${id}_poster`).catch(e => console.warn(`Could not delete poster: ${e.message}`))
+            );
+          }
+          if (item.bannerPath) {
+            imageDeletePromises.push(
+              storage.deleteImage(`${id}_banner`).catch(e => console.warn(`Could not delete banner: ${e.message}`))
+            );
+          }
+          await Promise.all(imageDeletePromises);
 
           // Delete item JSON
-          await githubStorage.deleteFile(config, `media/${id}.json`, itemResult.sha, `Delete ${id}`);
+          await storage.deleteFile(`media/${id}.json`, itemResult.sha, `Delete ${id}`);
         }
       } catch (e) {
         console.warn(`Could not delete item ${id}:`, e.message);
@@ -1264,11 +1197,10 @@ app.post("/delete", async (req, res) => {
 
     // Update index
     try {
-      const indexResult = await githubStorage.getFileContent(config, "media/index.json");
+      const indexResult = await storage.getFileContent("media/index.json");
       if (indexResult) {
         const index = indexResult.content.filter(id => !ids.includes(id));
-        await githubStorage.createOrUpdateFile(
-          config,
+        await storage.createOrUpdateFile(
           "media/index.json",
           index,
           `Remove ${ids.length} items from index`,
@@ -1288,21 +1220,19 @@ app.post("/delete", async (req, res) => {
 });
 
 // ===============================
-// 🔄 Update rating only (GitHub Storage)
+// 🔄 Update rating only (Unified Storage)
 // ===============================
 app.patch("/rating", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const { id, myRank } = req.body || {};
     if (!id) return res.status(400).send("Missing id");
 
-    const config = getDataRepoConfig();
-
     // Get current item
-    const itemResult = await githubStorage.getFileContent(config, `media/${id}.json`);
+    const itemResult = await storage.getFileContent(`media/${id}.json`);
     if (!itemResult) {
       return res.status(404).send("Item not found");
     }
@@ -1311,8 +1241,7 @@ app.patch("/rating", async (req, res) => {
     const item = itemResult.content;
     item.myRank = myRank ?? 0;
 
-    await githubStorage.createOrUpdateFile(
-      config,
+    await storage.createOrUpdateFile(
       `media/${id}.json`,
       item,
       `Update rating for ${id}`,
@@ -1328,21 +1257,19 @@ app.patch("/rating", async (req, res) => {
 });
 
 // ===============================
-// 🔄 Update item fields (GitHub Storage)
+// 🔄 Update item fields (Unified Storage)
 // ===============================
 app.patch("/update", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const { id, studio, developer, directorCreator, runtime, episodes, episodeRuntime, timeToBeat } = req.body || {};
     if (!id) return res.status(400).send("Missing id");
 
-    const config = getDataRepoConfig();
-
     // Get current item
-    const itemResult = await githubStorage.getFileContent(config, `media/${id}.json`);
+    const itemResult = await storage.getFileContent(`media/${id}.json`);
     if (!itemResult) {
       return res.status(404).send("Item not found");
     }
@@ -1359,8 +1286,7 @@ app.patch("/update", async (req, res) => {
       item.timeToBeat = typeof timeToBeat === 'string' ? timeToBeat : JSON.stringify(timeToBeat || {});
     }
 
-    await githubStorage.createOrUpdateFile(
-      config,
+    await storage.createOrUpdateFile(
       `media/${id}.json`,
       item,
       `Update fields for ${id}`,
@@ -1376,21 +1302,19 @@ app.patch("/update", async (req, res) => {
 });
 
 // ===============================
-// 🔗 Update linked movies for an actor (GitHub Storage)
+// 🔗 Update linked movies for an actor (Unified Storage)
 // ===============================
 app.patch("/actor-linked-movies", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const { id, linkedMovies } = req.body || {};
     if (!id) return res.status(400).send("Missing id");
 
-    const config = getDataRepoConfig();
-
     // Get current item
-    const itemResult = await githubStorage.getFileContent(config, `media/${id}.json`);
+    const itemResult = await storage.getFileContent(`media/${id}.json`);
     if (!itemResult) {
       return res.status(404).send("Item not found");
     }
@@ -1399,8 +1323,7 @@ app.patch("/actor-linked-movies", async (req, res) => {
     const item = itemResult.content;
     item.linkedMovies = linkedMovies || "";
 
-    await githubStorage.createOrUpdateFile(
-      config,
+    await storage.createOrUpdateFile(
       `media/${id}.json`,
       item,
       `Update linked movies for ${id}`,
@@ -1417,7 +1340,7 @@ app.patch("/actor-linked-movies", async (req, res) => {
 
 
 // ===============================
-// 🖼️ GitHub Image Proxy
+// 🖼️ Image Proxy (GitHub/Cloudinary)
 // ===============================
 app.get('/api/github-image', async (req, res) => {
   try {
@@ -1426,19 +1349,24 @@ app.get('/api/github-image', async (req, res) => {
       return res.status(400).send('Missing url parameter');
     }
 
+    // For Cloudinary URLs, just redirect
+    if (imageUrl.includes('cloudinary.com') || imageUrl.includes('res.cloudinary.com')) {
+      return res.redirect(imageUrl);
+    }
+
     // Security check: only allow GitHub URLs
     if (!imageUrl.includes('githubusercontent.com') && !imageUrl.includes('github.com')) {
       return res.status(403).send('Invalid domain');
     }
 
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const config = getDataRepoConfig();
 
     // Handle raw.githubusercontent.com URLs - use standard HTTPS with auth
-    if (imageUrl.includes('raw.githubusercontent.com')) {
+    if (imageUrl.includes('raw.githubusercontent.com') && config && config.token) {
       const https = require('https');
       const options = {
         headers: {
@@ -1489,15 +1417,14 @@ async function getServerSpotifyToken(manualClientId, manualClientSecret) {
 
     // If credentials not provided manually, try to load from settings/env
     if (!clientId || !clientSecret) {
-      // Get settings from GitHub
+      // Get settings from storage
       let settings = {};
       if (isGitHubConfigured()) {
         try {
-          const config = getDataRepoConfig();
-          const result = await githubStorage.getFileContent(config, "settings.json");
+          const result = await storage.getFileContent("settings.json");
           settings = result?.content || {};
         } catch (e) {
-          console.warn("Could not load settings from GitHub:", e.message);
+          console.warn("Could not load settings from storage:", e.message);
         }
       }
 
@@ -1593,10 +1520,8 @@ app.get("/collections", async (req, res) => {
       return res.json([]);
     }
 
-    const config = getDataRepoConfig();
-
     // Get collections index
-    const indexResult = await githubStorage.getFileContent(config, "collections/index.json");
+    const indexResult = await storage.getFileContent("collections/index.json");
     const index = indexResult?.content || [];
 
     if (index.length === 0) {
@@ -1607,7 +1532,7 @@ app.get("/collections", async (req, res) => {
     const collections = [];
     for (const id of index) {
       try {
-        const collResult = await githubStorage.getFileContent(config, `collections/${id}.json`);
+        const collResult = await storage.getFileContent(`collections/${id}.json`);
         if (collResult?.content) {
           const coll = collResult.content;
           // Ensure itemIds is an array
@@ -1639,7 +1564,7 @@ app.get("/collections", async (req, res) => {
 app.post("/collections", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const collection = req.body || {};
@@ -1649,14 +1574,11 @@ app.post("/collections", async (req, res) => {
       return res.status(400).send("Missing required fields: id and name");
     }
 
-    const config = getDataRepoConfig();
-    const ghConfig = getGitHubConfig();
-
     // Get current collection if exists
     let currentColl = null;
     let currentSha = null;
     try {
-      const existing = await githubStorage.getFileContent(config, `collections/${id}.json`);
+      const existing = await storage.getFileContent(`collections/${id}.json`);
       if (existing) {
         currentColl = existing.content;
         currentSha = existing.sha;
@@ -1667,34 +1589,19 @@ app.post("/collections", async (req, res) => {
 
     let finalPosterPath = posterPath || currentColl?.posterPath || "";
     let finalBannerPath = bannerPath || currentColl?.bannerPath || "";
-    let posterImageRepo = currentColl?.posterImageRepo || null;
-    let bannerImageRepo = currentColl?.bannerImageRepo || null;
 
     // Handle poster image upload
     if (posterBase64?.startsWith("data:image")) {
       try {
-        const selectedRepo = await githubStorage.selectImageRepo(
-          { owner: ghConfig.owner, token: ghConfig.token },
-          ghConfig.imageRepos
+        const imgResult = await storage.uploadImage(
+          posterBase64,
+          `collection_${id}_poster.webp`,
+          `Upload collection poster for ${id}`
         );
-
-        if (selectedRepo) {
-          const imgConfig = { owner: ghConfig.owner, repo: selectedRepo, token: ghConfig.token };
-          const imgResult = await githubStorage.uploadImage(
-            imgConfig,
-            `collection_${id}_poster.webp`,
-            posterBase64,
-            `Upload collection poster for ${id}`
-          );
-          finalPosterPath = imgResult.downloadUrl;
-          posterImageRepo = selectedRepo;
-        } else {
-          finalPosterPath = `assets/img/collection_${id}_poster.webp`;
-          fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_poster.webp`),
-            Buffer.from(posterBase64.split(",")[1], "base64"));
-        }
+        finalPosterPath = imgResult.url;
       } catch (imgError) {
         console.warn("⚠️ Error uploading collection poster:", imgError.message);
+        // Fallback to local storage
         finalPosterPath = `assets/img/collection_${id}_poster.webp`;
         fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_poster.webp`),
           Buffer.from(posterBase64.split(",")[1], "base64"));
@@ -1704,28 +1611,15 @@ app.post("/collections", async (req, res) => {
     // Handle banner image upload
     if (bannerBase64?.startsWith("data:image")) {
       try {
-        const selectedRepo = await githubStorage.selectImageRepo(
-          { owner: ghConfig.owner, token: ghConfig.token },
-          ghConfig.imageRepos
+        const imgResult = await storage.uploadImage(
+          bannerBase64,
+          `collection_${id}_banner.webp`,
+          `Upload collection banner for ${id}`
         );
-
-        if (selectedRepo) {
-          const imgConfig = { owner: ghConfig.owner, repo: selectedRepo, token: ghConfig.token };
-          const imgResult = await githubStorage.uploadImage(
-            imgConfig,
-            `collection_${id}_banner.webp`,
-            bannerBase64,
-            `Upload collection banner for ${id}`
-          );
-          finalBannerPath = imgResult.downloadUrl;
-          bannerImageRepo = selectedRepo;
-        } else {
-          finalBannerPath = `assets/img/collection_${id}_banner.webp`;
-          fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_banner.webp`),
-            Buffer.from(bannerBase64.split(",")[1], "base64"));
-        }
+        finalBannerPath = imgResult.url;
       } catch (imgError) {
         console.warn("⚠️ Error uploading collection banner:", imgError.message);
+        // Fallback to local storage
         finalBannerPath = `assets/img/collection_${id}_banner.webp`;
         fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_banner.webp`),
           Buffer.from(bannerBase64.split(",")[1], "base64"));
@@ -1739,14 +1633,11 @@ app.post("/collections", async (req, res) => {
       itemIds: itemIds || [],
       createdAt: createdAt || new Date().toISOString(),
       posterPath: finalPosterPath,
-      bannerPath: finalBannerPath,
-      posterImageRepo,
-      bannerImageRepo
+      bannerPath: finalBannerPath
     };
 
-    // Save collection to GitHub
-    await githubStorage.createOrUpdateFile(
-      config,
+    // Save collection to storage
+    await storage.createOrUpdateFile(
       `collections/${id}.json`,
       collectionData,
       `${currentSha ? 'Update' : 'Add'} collection ${name}`,
@@ -1756,12 +1647,11 @@ app.post("/collections", async (req, res) => {
     // Update collections index if new
     if (!currentSha) {
       try {
-        const indexResult = await githubStorage.getFileContent(config, "collections/index.json");
+        const indexResult = await storage.getFileContent("collections/index.json");
         let index = indexResult?.content || [];
         if (!index.includes(id)) {
           index.push(id);
-          await githubStorage.createOrUpdateFile(
-            config,
+          await storage.createOrUpdateFile(
             "collections/index.json",
             index,
             `Add ${id} to collections index`,
@@ -1769,7 +1659,7 @@ app.post("/collections", async (req, res) => {
           );
         }
       } catch (e) {
-        await githubStorage.createOrUpdateFile(config, "collections/index.json", [id], "Initialize collections index");
+        await storage.createOrUpdateFile("collections/index.json", [id], "Initialize collections index");
       }
     }
 
@@ -1784,7 +1674,7 @@ app.post("/collections", async (req, res) => {
 app.patch("/collections/:id", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const { id } = req.params;
@@ -1794,11 +1684,8 @@ app.patch("/collections/:id", async (req, res) => {
       return res.status(400).send("Missing collection id");
     }
 
-    const config = getDataRepoConfig();
-    const ghConfig = getGitHubConfig();
-
     // Get current collection
-    const collResult = await githubStorage.getFileContent(config, `collections/${id}.json`);
+    const collResult = await storage.getFileContent(`collections/${id}.json`);
     if (!collResult) {
       return res.status(404).send("Collection not found");
     }
@@ -1806,70 +1693,40 @@ app.patch("/collections/:id", async (req, res) => {
     const collection = collResult.content;
 
     // Handle poster image upload
-    if (updates.posterBase64) {
-      let base64Data = updates.posterBase64;
-      if (updates.posterBase64.startsWith("data:image")) {
-        base64Data = updates.posterBase64.split(",")[1];
-      }
-
+    if (updates.posterBase64 && updates.posterBase64.startsWith("data:image")) {
       try {
-        const selectedRepo = await githubStorage.selectImageRepo(
-          { owner: ghConfig.owner, token: ghConfig.token },
-          ghConfig.imageRepos
+        const imgResult = await storage.uploadImage(
+          updates.posterBase64,
+          `collection_${id}_poster.webp`,
+          `Update collection poster for ${id}`
         );
-
-        if (selectedRepo) {
-          const imgConfig = { owner: ghConfig.owner, repo: selectedRepo, token: ghConfig.token };
-          const imgResult = await githubStorage.uploadImage(
-            imgConfig,
-            `collection_${id}_poster.webp`,
-            base64Data,
-            `Update collection poster for ${id}`
-          );
-          collection.posterPath = imgResult.downloadUrl;
-          collection.posterImageRepo = selectedRepo;
-        } else {
-          const posterPath = `assets/img/collection_${id}_poster.webp`;
-          fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_poster.webp`),
-            Buffer.from(base64Data, "base64"));
-          collection.posterPath = posterPath;
-        }
+        collection.posterPath = imgResult.url;
       } catch (e) {
         console.error("❌ Error saving poster image:", e.message);
+        // Fallback to local
+        const posterPath = `assets/img/collection_${id}_poster.webp`;
+        fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_poster.webp`),
+          Buffer.from(updates.posterBase64.split(",")[1], "base64"));
+        collection.posterPath = posterPath;
       }
     }
 
     // Handle banner image upload
-    if (updates.bannerBase64) {
-      let base64Data = updates.bannerBase64;
-      if (updates.bannerBase64.startsWith("data:image")) {
-        base64Data = updates.bannerBase64.split(",")[1];
-      }
-
+    if (updates.bannerBase64 && updates.bannerBase64.startsWith("data:image")) {
       try {
-        const selectedRepo = await githubStorage.selectImageRepo(
-          { owner: ghConfig.owner, token: ghConfig.token },
-          ghConfig.imageRepos
+        const imgResult = await storage.uploadImage(
+          updates.bannerBase64,
+          `collection_${id}_banner.webp`,
+          `Update collection banner for ${id}`
         );
-
-        if (selectedRepo) {
-          const imgConfig = { owner: ghConfig.owner, repo: selectedRepo, token: ghConfig.token };
-          const imgResult = await githubStorage.uploadImage(
-            imgConfig,
-            `collection_${id}_banner.webp`,
-            base64Data,
-            `Update collection banner for ${id}`
-          );
-          collection.bannerPath = imgResult.downloadUrl;
-          collection.bannerImageRepo = selectedRepo;
-        } else {
-          const bannerPath = `assets/img/collection_${id}_banner.webp`;
-          fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_banner.webp`),
-            Buffer.from(base64Data, "base64"));
-          collection.bannerPath = bannerPath;
-        }
+        collection.bannerPath = imgResult.url;
       } catch (e) {
         console.error("❌ Error saving banner image:", e.message);
+        // Fallback to local
+        const bannerPath = `assets/img/collection_${id}_banner.webp`;
+        fs.writeFileSync(path.join(IMG_DIR, `collection_${id}_banner.webp`),
+          Buffer.from(updates.bannerBase64.split(",")[1], "base64"));
+        collection.bannerPath = bannerPath;
       }
     }
 
@@ -1880,8 +1737,7 @@ app.patch("/collections/:id", async (req, res) => {
     if (updates.bannerPath !== undefined && !updates.bannerBase64) collection.bannerPath = updates.bannerPath || "";
 
     // Save updated collection
-    await githubStorage.createOrUpdateFile(
-      config,
+    await storage.createOrUpdateFile(
       `collections/${id}.json`,
       collection,
       `Update collection ${id}`,
@@ -1899,7 +1755,7 @@ app.patch("/collections/:id", async (req, res) => {
 app.delete("/collections/:id", async (req, res) => {
   try {
     if (!isGitHubConfigured()) {
-      return res.status(500).send("GitHub storage not configured");
+      return res.status(500).send("Storage not configured");
     }
 
     const { id } = req.params;
@@ -1907,42 +1763,31 @@ app.delete("/collections/:id", async (req, res) => {
       return res.status(400).send("Missing collection id");
     }
 
-    const config = getDataRepoConfig();
-    const ghConfig = getGitHubConfig();
-
-    // Get collection to find image repos
+    // Get collection and delete
     try {
-      const collResult = await githubStorage.getFileContent(config, `collections/${id}.json`);
+      const collResult = await storage.getFileContent(`collections/${id}.json`);
       if (collResult) {
         const collection = collResult.content;
 
-        // Delete images from GitHub if they exist
-        if (collection.posterImageRepo && collection.posterPath) {
+        // Delete images
+        if (collection.posterPath) {
           try {
-            const imgConfig = { owner: ghConfig.owner, repo: collection.posterImageRepo, token: ghConfig.token };
-            const posterFile = await githubStorage.getFileContent(imgConfig, `collection_${id}_poster.webp`);
-            if (posterFile) {
-              await githubStorage.deleteFile(imgConfig, `collection_${id}_poster.webp`, posterFile.sha, `Delete collection poster for ${id}`);
-            }
+            await storage.deleteImage(`collection_${id}_poster`);
           } catch (e) {
             console.warn(`Could not delete poster for collection ${id}:`, e.message);
           }
         }
 
-        if (collection.bannerImageRepo && collection.bannerPath) {
+        if (collection.bannerPath) {
           try {
-            const imgConfig = { owner: ghConfig.owner, repo: collection.bannerImageRepo, token: ghConfig.token };
-            const bannerFile = await githubStorage.getFileContent(imgConfig, `collection_${id}_banner.webp`);
-            if (bannerFile) {
-              await githubStorage.deleteFile(imgConfig, `collection_${id}_banner.webp`, bannerFile.sha, `Delete collection banner for ${id}`);
-            }
+            await storage.deleteImage(`collection_${id}_banner`);
           } catch (e) {
             console.warn(`Could not delete banner for collection ${id}:`, e.message);
           }
         }
 
         // Delete collection JSON
-        await githubStorage.deleteFile(config, `collections/${id}.json`, collResult.sha, `Delete collection ${id}`);
+        await storage.deleteFile(`collections/${id}.json`, collResult.sha, `Delete collection ${id}`);
       }
     } catch (e) {
       console.warn(`Could not delete collection ${id}:`, e.message);
@@ -1960,11 +1805,10 @@ app.delete("/collections/:id", async (req, res) => {
 
     // Update index
     try {
-      const indexResult = await githubStorage.getFileContent(config, "collections/index.json");
+      const indexResult = await storage.getFileContent("collections/index.json");
       if (indexResult) {
         const index = indexResult.content.filter(cid => cid !== id);
-        await githubStorage.createOrUpdateFile(
-          config,
+        await storage.createOrUpdateFile(
           "collections/index.json",
           index,
           `Remove ${id} from collections index`,
@@ -5360,13 +5204,12 @@ app.get("/category-images", async (req, res) => {
   log("🖼️ GET /category-images called");
   try {
     if (!isGitHubConfigured()) {
-      log("⚠️ GitHub not configured, returning empty array");
+      log("⚠️ Storage not configured, returning empty array");
       return res.json([]);
     }
 
-    const config = getDataRepoConfig();
-    log("🔍 Fetching category-images.json from GitHub...");
-    const result = await githubStorage.getFileContent(config, "category-images.json");
+    log("🔍 Fetching category-images.json from storage...");
+    const result = await storage.getFileContent("category-images.json");
 
     if (!result || !result.content) {
       log("📭 No category images found");
@@ -5396,8 +5239,8 @@ app.post("/category-images", async (req, res) => {
   log("🖼️ POST /category-images called");
   try {
     if (!isGitHubConfigured()) {
-      log("⚠️ GitHub not configured, cannot save");
-      return res.status(500).send("GitHub storage not configured");
+      log("⚠️ Storage not configured, cannot save");
+      return res.status(500).send("Storage not configured");
     }
 
     const { category, image } = req.body || {};
@@ -5408,15 +5251,12 @@ app.post("/category-images", async (req, res) => {
       return res.status(400).send("Missing category or image");
     }
 
-    const config = getDataRepoConfig();
-    log("📂 Using data repo config:", { owner: config.owner, repo: config.repo });
-
     // Get current category images
     let catImages = {};
     let currentSha = null;
     try {
       log("🔍 Getting existing category-images.json...");
-      const result = await githubStorage.getFileContent(config, "category-images.json");
+      const result = await storage.getFileContent("category-images.json");
       if (result) {
         catImages = result.content || {};
         currentSha = result.sha;
@@ -5433,18 +5273,17 @@ app.post("/category-images", async (req, res) => {
     catImages[category] = image;
     log(`📝 Updated category '${category}', now have ${Object.keys(catImages).length} categories`);
 
-    // Save to GitHub
-    log("💾 Saving to GitHub...");
-    const saveResult = await githubStorage.createOrUpdateFile(
-      config,
+    // Save to storage
+    log("💾 Saving to storage...");
+    const saveResult = await storage.createOrUpdateFile(
       "category-images.json",
       catImages,
       `Update category image for ${category}`,
       currentSha
     );
 
-    log(`✅ Saved category image for: ${category}, new SHA: ${saveResult?.sha}`);
-    res.json({ ok: true, sha: saveResult?.sha });
+    log(`✅ Saved category image for: ${category}`);
+    res.json({ ok: true });
   } catch (e) {
     console.error("❌ /category-images POST error:", e.message);
     console.error("❌ /category-images POST error stack:", e.stack);
