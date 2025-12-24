@@ -16762,3 +16762,4 @@ document.addEventListener('DOMContentLoaded', () => {
     tracker.setupVotesSlider();
     tracker.setupRatingSlider();
 });
+
