@@ -463,29 +463,31 @@ function log(...args) {
 }
 
 // ===============================
-// ⚙️ Settings endpoints (Unified Storage)
+// ⚙️ Settings endpoints (Cloudinary Storage)
 // ===============================
 app.get('/settings', async (req, res) => {
   try {
+    log("📖 GET /settings called");
+
     if (!isGitHubConfigured()) {
       // Return default settings if storage not configured
-      log("Storage not configured, returning default settings");
+      log("⚠️ Cloudinary not configured, returning default settings");
       return res.json({});
     }
+
+    log("🔍 Loading settings from Cloudinary...");
 
     // Use unified storage abstraction
     const result = await storage.getFileContent("settings.json");
 
     if (!result || !result.content) {
+      log("📭 No settings found in Cloudinary, returning empty object");
       return res.json({});
     }
 
-    // Store SHA for later updates (GitHub only)
-    if (result.sha) {
-      githubConfigSha.settings = result.sha;
-    }
-
     const s = result.content;
+    log(`✅ Loaded settings from Cloudinary:`, Object.keys(s));
+
     // Parse tabBackgrounds if it's a string
     if (s && s.tabBackgrounds && typeof s.tabBackgrounds === 'string') {
       try {
@@ -498,6 +500,7 @@ app.get('/settings', async (req, res) => {
     res.json(s);
   } catch (error) {
     console.error('❌ Error reading settings:', error.message);
+    console.error('❌ Error stack:', error.stack);
     // Return empty settings on error to allow app to function
     res.json({});
   }
